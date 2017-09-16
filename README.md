@@ -1,4 +1,4 @@
-# Fastify tweeter clone
+# Fastify twitter clone
 
 The aim of this project is to show how `fastify` can be used.
 
