@@ -46,7 +46,7 @@ The user authentication is made using `fastify-jwt`. So the client in the browse
 
 This plugin registers two APIs: `/api/tweet` in `GET` and `POST` for the tweet fetching and creation.
 
-This plugin contacts the user plugin for checking the json web token.
+This plugin contacts the user plugin for checking the json web token. For do this, a HTTP call is made internally.
 
 ## Frontend
 
