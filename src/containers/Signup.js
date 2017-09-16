@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { Redirect } from 'react-router-dom'
 
-import { makeLogin, makeRegister } from '../action'
+import { makeRegister } from '../action'
 
 import Form from 'muicss/lib/react/form'
 import Input from 'muicss/lib/react/input'
@@ -12,10 +12,11 @@ import Container from 'muicss/lib/react/container'
 import Row from 'muicss/lib/react/row'
 import Col from 'muicss/lib/react/col'
 
-class LoginForm extends React.Component {
+class Signup extends React.Component {
   constructor () {
     super()
 
+    this.emailInput = null
     this.usernameInput = null
     this.passwordInput = null
   }
@@ -29,10 +30,11 @@ class LoginForm extends React.Component {
       return <div>Loading!!!</div>
     }
 
-    const login = () => {
+    const signup = () => {
+      const email = this.emailInput.controlEl.value
       const username = this.usernameInput.controlEl.value
       const password = this.passwordInput.controlEl.value
-      this.props.onLogin(username, password)
+      this.props.onSignup({ email, username, password })
       return false
     }
 
@@ -41,7 +43,7 @@ class LoginForm extends React.Component {
       : <div className='mui--text-caption' />
 
     const divStyle = {
-      height: '350',
+      height: '450',
       position: 'absolute',
       top: 0,
       bottom: 0,
@@ -56,14 +58,15 @@ class LoginForm extends React.Component {
           <Row>
             <Col md='4' md-offset='4'>
               <Form>
-                <legend>Login</legend>
+                <legend>Sign up</legend>
+                <Input hint='email' type='email' ref={input => { this.emailInput = input }} />
                 <Input hint='username' type='text' ref={input => { this.usernameInput = input }} />
                 <Input hint='password' type='password' ref={input => { this.passwordInput = input }} />
                 {errorDiv}
                 <div className='mui--text-center'>
-                  <Button size='large' color='primary' onClick={() => login()}>Login</Button>
+                  <Button size='large' color='primary' onClick={() => signup()}>Sign up</Button>
                   <div>or</div>
-                  <Button size='small' variant='flat' color='primary' onClick={() => this.props.history.push('/signup')}>Signup</Button>
+                  <Button size='small' variant='flat' color='primary' onClick={() => this.props.history.push('/login')}>Login</Button>
                 </div>
               </Form>
             </Col>
@@ -74,9 +77,9 @@ class LoginForm extends React.Component {
   }
 }
 
-LoginForm.propTypes = {
+Signup.propTypes = {
   isLogged: PropTypes.bool.isRequired,
-  onLogin: PropTypes.func.isRequired,
+  onSignup: PropTypes.func.isRequired,
   error: PropTypes.string
 }
 
@@ -90,9 +93,10 @@ const mapStateToProps = (state) => {
 
 const mapDispatchToProps = (dispatch, a, b, c) => {
   return {
-    onLogin: (username, password) => dispatch(makeLogin(username, password)),
-    onRegister: (username, password) => dispatch(makeRegister(username, password))
+    onSignup: ({email, username, password}) => {
+      return dispatch(makeRegister({ email, username, password }))
+    }
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(LoginForm)
+export default connect(mapStateToProps, mapDispatchToProps)(Signup)

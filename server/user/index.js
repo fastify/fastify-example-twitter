@@ -69,7 +69,7 @@ function registerRoutes (a, done) {
   })
 
   this.get('/api/me', async function (req, reply) {
-    const jwt = req.req.headers.authorization.substr(7)
+    const jwt = (req.req.headers.authorization || '').substr(7)
     const user = await userService.me(jwt)
     return user
   })

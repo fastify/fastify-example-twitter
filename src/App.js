@@ -11,6 +11,7 @@ import createHistory from 'history/createBrowserHistory'
 import { ConnectedRouter, routerReducer, routerMiddleware } from 'react-router-redux'
 
 import Login from './containers/Login'
+import Signup from './containers/Signup'
 import Dashboard from './containers/Dashboard'
 import AppHeader from './containers/AppHeader'
 
@@ -39,6 +40,7 @@ class App extends Component {
         <AppHeader />
         <Switch>
           <Route exact path='/login' component={Login} />
+          <Route exact path='/signup' component={Signup} />
           <Route path='/' component={Dashboard} />
           <Route component={Dashboard} />
         </Switch>

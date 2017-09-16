@@ -20,9 +20,11 @@ import {
  } from './actionTypes'
 import axios from 'axios'
 
+import { push } from 'react-router-redux'
+
 const doingLogin = () => ({ type: LOGIN_REQUEST })
 const loginSuccess = ({jwt}) => ({ type: LOGIN_SUCCESS, jwt })
-const loginFailed = error => ({ type: LOGIN_FAILED, error })
+const loginFailed = error => ({ type: LOGIN_FAILED, error: error.response.data.message })
 
 export const makeLogin = (username, password) => dispatch => {
   dispatch(doingLogin())
@@ -39,11 +41,14 @@ const doingRegister = () => ({ type: REGISTER_REQUEST })
 const registerSuccess = ({jwt}) => ({ type: REGISTER_SUCCESS, jwt })
 const registerFailed = error => ({ type: REGISTER_FAILED, error: error.response.data.message })
 
-export const makeRegister = (username, password) => dispatch => {
+export const makeRegister = ({email, username, password}) => dispatch => {
   dispatch(doingRegister())
-  return axios.post('/api/register', { username, password })
+  return axios.post('/api/register', { email, username, password })
     .then((response) => response.data)
-    .then(body => dispatch(registerSuccess(body)))
+    .then(body => {
+      dispatch(push('/login'))
+      return dispatch(registerSuccess(body))
+    })
     .catch(error => dispatch(registerFailed(error)))
 }
 
@@ -52,6 +57,8 @@ const tweetsSuccess = tweets => ({ type: TWEETS_SUCCESS, tweets })
 const tweetsFailed = error => ({ type: TWEETS_FAILD, error })
 export const askTweets = () => dispatch => {
   dispatch(requestingTweets())
+
+  // return Promise.resolve({data: tweets})
   return axios.get('/api/tweet')
     .then((response) => response.data)
     .then(body => dispatch(tweetsSuccess(body)))

@@ -8,7 +8,7 @@ class TweetService {
   async fetchTweets (user) {
     const tweets = await this.tweetCollection.find({
       'user._id': user._id
-    }).toArray()
+    }).sort({createdAt: -1}).toArray()
     return tweets
   }
 

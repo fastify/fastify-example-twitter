@@ -4,11 +4,18 @@ import PropTypes from 'prop-types'
 
 import { askTweets, postNewTweet } from '../action'
 
+import Button from 'muicss/lib/react/button'
+import Container from 'muicss/lib/react/container'
+import Row from 'muicss/lib/react/row'
+import Col from 'muicss/lib/react/col'
+import Textarea from 'muicss/lib/react/textarea'
+import Panel from 'muicss/lib/react/panel'
+
 const Tweet = ({_id, text, user}) => {
-  return <li>
+  return <Panel>
     <p>{text}</p>
-    <small>{user.username}</small>
-  </li>
+    <small className='mui--pull-right'>{user.username}</small>
+  </Panel>
 }
 
 class TweetForm extends React.Component {
@@ -19,15 +26,21 @@ class TweetForm extends React.Component {
   }
 
   onSubmit () {
-    const tweetText = this.tweetTextArea.value
+    const tweetText = this.tweetTextArea.controlEl.value
     this.props.onNewTweet(tweetText)
     return false
   }
 
   render () {
     return <div>
-      <textarea ref={(input) => { this.tweetTextArea = input }} />
-      <button onClick={() => this.onSubmit()}>tweet</button>
+      <Container fluid>
+        <Row>
+          <Col md='4' md-offset='4'>
+            <Textarea hint='share me tweet!' ref={(input) => { this.tweetTextArea = input }} />
+            <Button className='mui--pull-right' color='primary' onClick={() => this.onSubmit()}>Launch</Button>
+          </Col>
+        </Row>
+      </Container>
     </div>
   }
 }
@@ -42,13 +55,15 @@ class Twitters extends React.Component {
     if (isFetching) return <div>Loading tweets...</div>
 
     const tweetForm = <TweetForm onNewTweet={text => this.props.onNewTweet(text)} />
-    const tweetStream = <ol>
-      {
-        tweets.map(t => <Tweet key={t._id} {...t} />)
-      }
-    </ol>
+    const tweetStream = <Container fluid>
+      <Row>
+        <Col md='4' md-offset='4'>
+          { tweets.map(t => <Tweet key={t._id} {...t} />) }
+        </Col>
+      </Row>
+    </Container>
     const noTweetsBanner = tweets.length === 0
-      ? <div>No tweet available, let is stating to write one!</div>
+      ? <div className='mui--text-center mui--text-dark mui--text-body2'>No tweet available, let is stating to write one!</div>
       : ''
 
     return <div>

@@ -46,7 +46,7 @@ function decorateWithTweetService (a, done) {
 const request = require('request-promise-native')
 function decorateWithUserClient (a, done) {
   this.decorate('userClient', {
-    getMe: async (req) => {
+    getMe: (req) => {
       return request({
         uri: `${this.config.USER_MICROSERVICE_BASE_URL}/api/me`,
         method: 'GET',
@@ -65,8 +65,11 @@ function registerRoutes (a, done) {
   const { tweetService, userClient } = this
 
   this.addHook('preHandler', async function (req, reply, done) {
-    const user = await userClient.getMe(req)
-    req.user = user
+    try {
+      req.user = await userClient.getMe(req)
+    } catch (e) {
+      return done(e)
+    }
     done()
   })
 
