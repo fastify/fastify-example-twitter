@@ -27,7 +27,7 @@ class TweetForm extends React.Component {
   render () {
     return <div>
       <textarea ref={(input) => { this.tweetTextArea = input }} />
-      <button onClick={() => this.onSubmit()} />
+      <button onClick={() => this.onSubmit()}>tweet</button>
     </div>
   }
 }
