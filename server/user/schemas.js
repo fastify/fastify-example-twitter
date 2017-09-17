@@ -55,7 +55,35 @@ const login = {
   }
 }
 
+const search = {
+  schema: {
+    querystring: {
+      type: 'object',
+      require: [ 'search' ],
+      properties: {
+        search: { type: 'string' }
+      },
+      additionalProperties: false
+    },
+    response: {
+      200: {
+        type: 'array',
+        items: {
+          type: 'object',
+          require: [ '_id', 'username' ],
+          properties: {
+            _id: { type: 'string' },
+            username: { type: 'string' }
+          },
+          additionalProperties: false
+        }
+      }
+    }
+  }
+}
+
 module.exports = {
   registration,
-  login
+  login,
+  search
 }

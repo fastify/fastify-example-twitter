@@ -12,7 +12,10 @@ import {
 
   TWEETS_REQUEST,
   TWEETS_SUCCESS,
-  TWEETS_FAILD
+  TWEETS_FAILD,
+
+  SEARCH_SUCCESS,
+  SEARCH_FAILED
  } from '../action/actionTypes'
 
 function user (state = {}, action) {
@@ -48,7 +51,19 @@ function tweets (state = TWEETS_INITIAL_STATE, action) {
   return state
 }
 
+const SEARCH_INITIAL_STATE = { users: [] }
+function search (state = SEARCH_INITIAL_STATE, action) {
+  switch (action.type) {
+    case SEARCH_SUCCESS:
+      return { ...state, users: action.users }
+    case SEARCH_FAILED:
+      return { ...state, users: [] }
+  }
+  return state
+}
+
 export default {
-  user: user,
-  tweets: tweets
+  user,
+  tweets,
+  search
 }

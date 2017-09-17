@@ -4,7 +4,8 @@ const serie = require('fastseries')()
 
 const {
   login: loginSchema,
-  registration: registrationSchema
+  registration: registrationSchema,
+  search: searchSchema
 } = require('./schemas')
 const UserService = require('./UserService')
 
@@ -97,6 +98,12 @@ function registerRoutes (a, done) {
     const jwt = (req.req.headers.authorization || '').substr(7)
     const user = await userService.me(jwt)
     return user
+  })
+
+  this.get('/api/search', searchSchema, async function (req, reply) {
+    const { search } = req.query
+    const users = await userService.search(search)
+    return users
   })
 
   done()

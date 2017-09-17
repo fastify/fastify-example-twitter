@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import './App.css'
 
-import { Route, Link, Redirect, Switch } from 'react-router-dom'
+import { Route, Switch } from 'react-router-dom'
 
 import { createStore, combineReducers, applyMiddleware } from 'redux'
 import { Provider } from 'react-redux'
@@ -13,6 +13,7 @@ import { ConnectedRouter, routerReducer, routerMiddleware } from 'react-router-r
 import Login from './containers/Login'
 import Signup from './containers/Signup'
 import Dashboard from './containers/Dashboard'
+import Search from './containers/Search'
 import AppHeader from './containers/AppHeader'
 
 import reducers from './reducers'
@@ -41,6 +42,7 @@ class App extends Component {
         <Switch>
           <Route exact path='/login' component={Login} />
           <Route exact path='/signup' component={Signup} />
+          <Route exact path='/search' component={Search} />
           <Route path='/' component={Dashboard} />
           <Route component={Dashboard} />
         </Switch>

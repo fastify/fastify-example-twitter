@@ -43,6 +43,14 @@ class UserService {
     const users = await this.userCollection.find({ username }, {password: 0}).toArray()
     return users[0]
   }
+
+  async search (searchString) {
+    const query = {
+      username: { $regex: searchString }
+    }
+    const users = await this.userCollection.find(query, {password: 0}).limit(5).toArray()
+    return users
+  }
 }
 
 module.exports = UserService

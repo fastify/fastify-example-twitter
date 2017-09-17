@@ -89,4 +89,41 @@ describe('user', () => {
           })
       })
   })
+
+  it('search', () => {
+    const USERNAMES = [ 'user-foo-1', 'user-foo-2', 'user-foo-3', 'another-user' ]
+    return Promise.all(USERNAMES.map(username => {
+      return makeRequest(fastify, {
+        method: 'POST',
+        url: '/api/register',
+        headers: {
+          'Content-type': 'application/json'
+        },
+        payload: JSON.stringify({
+          username: username,
+          password: 'the-password'
+        })
+      })
+        .then(res => {
+          assert.equal(200, res.statusCode, res.payload)
+        })
+    }))
+      .then(() => {
+        return makeRequest(fastify, {
+          method: 'GET',
+          url: '/api/search?search=-foo-'
+        })
+          .then(res => {
+            assert.equal(200, res.statusCode, res.payload)
+
+            const users = JSON.parse(res.payload)
+            assert.equal(3, users.length)
+
+            assert.ok(users.find(u => u.username === USERNAMES[0]))
+            assert.ok(users.find(u => u.username === USERNAMES[1]))
+            assert.ok(users.find(u => u.username === USERNAMES[2]))
+            assert.ok(!users.find(u => u.username === USERNAMES[3]))
+          })
+      })
+  })
 })

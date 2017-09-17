@@ -16,7 +16,10 @@ import {
 
   POST_TWEET_REQUEST,
   POST_TWEET_SUCCESS,
-  POST_TWEET_FAILED
+  POST_TWEET_FAILED,
+
+  SEARCH_SUCCESS,
+  SEARCH_FAILED
  } from './actionTypes'
 import axios from 'axios'
 
@@ -83,4 +86,13 @@ const logoutSuccess = () => ({ type: LOGOUT_SUCCESS })
 export const logout = () => dispatch => {
   delete axios.defaults.headers.common['Authorization']
   dispatch(logoutSuccess())
+}
+
+const searchSuccess = users => ({ type: SEARCH_SUCCESS, users })
+const searchFail = () => ({ type: SEARCH_FAILED })
+export const search = searchText => dispatch => {
+  return axios.get('/api/search', { params: { search: searchText } })
+    .then((response) => response.data)
+    .then(body => dispatch(searchSuccess(body)))
+    .catch(error => dispatch(searchFail(error)))
 }

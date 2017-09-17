@@ -42,11 +42,13 @@ Each plugins has the same structure:
 
 ### User plugin
 
-This plugin exports 3 APIs: `/api/register`, `/api/login`, `/api/me`.
+This plugin exports some APIs:
+- `/api/register` makes the sign up
+- `/api/login` makes the login
+- `/api/me` returns the public user properties given a jwt
+- `/api/search` returns a list of user that match the query
 
 The user authentication is made using `fastify-jwt`. So the client in the browser side should use the json web token returned by `/api/login` for contacting the authenticated APIs.
-
-`/api/me` returns all the public user properties.
 
 ### Tweet plugin
 

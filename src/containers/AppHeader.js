@@ -3,6 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 
 import { logout } from '../action'
+import { Link } from 'react-router-dom'
 
 import Appbar from 'muicss/lib/react/appbar'
 import Button from 'muicss/lib/react/button'
@@ -14,6 +15,9 @@ const LoggedAppHeader = ({logout}) => <Appbar>
   <Container fluid style={{paddingTop: '10px'}}>
     <Row>
       <Col md='12'>
+        <Button size='small' color='secondary'>
+          <Link to='/search'>Search</Link>
+        </Button>
         <Button style={{position: 'absolute', right: '15px'}} size='small' color='secondary' onClick={() => logout()}>Logout</Button>
       </Col>
     </Row>
