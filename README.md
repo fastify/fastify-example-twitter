@@ -34,6 +34,12 @@ Thankfully to `fastify-env`, each plugin describes the own configuration depende
 
 All plugins use `fastify-mongodb` for the data persistence.
 
+Each plugins has the same structure:
+- `mongoCollectionSetup.js` that adds [mongodb schema validator](https://docs.mongodb.com/manual/core/document-validation/) and the indexes.
+- `schemas.js` that describes the [`fastify` schemas](https://github.com/fastify/fastify/blob/master/docs/Validation-And-Serialize.md)
+- `*Service.js` that implements the plugin business logic
+- `index.js` that exports the routes as a [`fastify` plugin](https://github.com/fastify/fastify/blob/master/docs/Plugins.md) and builds the setup
+
 ### User plugin
 
 This plugin exports 3 APIs: `/api/register`, `/api/login`, `/api/me`.
@@ -92,3 +98,5 @@ Now you have spitted the code into multiple microservices without doing nothing!
 - [ ] Better README.md
 - [ ] Provide a Dockerfile for serving static file when splitting into multiple microservices
 - [ ] Use `fastify-react` for react serve side rendering
+- [x] Better UI
+- [ ] More better UI

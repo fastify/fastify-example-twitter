@@ -8,6 +8,31 @@ const {
 } = require('./schemas')
 const UserService = require('./UserService')
 
+module.exports = function (fastify, opts, next) {
+  serie(
+    // fastify will be the 'this' in the following functions
+    fastify,
+    [
+      // check if the opts + env is ok
+      registerEnv,
+      // add fastify.mongo using `fastify-mongodb`
+      registerMongo,
+      // decorate fastify instance with 'userCollection'
+      decorateWithUserCollection,
+      // decorate fastify with jwt utils using `fastify-jwt`
+      registerJwt,
+      // assert validation schema and indexes
+      registerMongoSetup,
+      // add business logic instance to fastify
+      decorateWithUserService,
+      // finally registering the routes
+      registerRoutes
+    ],
+    opts,
+    next
+  )
+}
+
 function registerEnv (data, done) {
   const envOpts = {
     schema: {
@@ -75,21 +100,4 @@ function registerRoutes (a, done) {
   })
 
   done()
-}
-
-module.exports = function (fastify, opts, next) {
-  serie(
-    fastify,
-    [
-      registerEnv,
-      registerMongo,
-      decorateWithUserCollection,
-      registerJwt,
-      registerMongoSetup,
-      decorateWithUserService,
-      registerRoutes
-    ],
-    opts,
-    next
-  )
 }

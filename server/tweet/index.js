@@ -7,6 +7,24 @@ const {
 } = require('./schemas')
 const TweetService = require('./TweetService')
 
+module.exports = function (fastify, opts, next) {
+  // See user/index.js for some little explainations
+  serie(
+    fastify,
+    [
+      registerEnv,
+      registerMongo,
+      decorateWithTweetCollection,
+      registerMongoSetup,
+      decorateWithTweetService,
+      decorateWithUserClient,
+      registerRoutes
+    ],
+    null,
+    next
+  )
+}
+
 function registerEnv (a, done) {
   const envOpts = {
     schema: {
@@ -85,21 +103,4 @@ function registerRoutes (a, done) {
   })
 
   done()
-}
-
-module.exports = function (fastify, opts, next) {
-  serie(
-    fastify,
-    [
-      registerEnv,
-      registerMongo,
-      decorateWithTweetCollection,
-      registerMongoSetup,
-      decorateWithTweetService,
-      decorateWithUserClient,
-      registerRoutes
-    ],
-    null,
-    next
-  )
 }
