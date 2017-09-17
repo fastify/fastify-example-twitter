@@ -16,18 +16,13 @@ const configuration = {
 }
 
 let fastify
-
-function dropMongo () {
-  return MongoClient.connect(configuration.USER_MONGO_URL)
-    .then(mongoClient => {
-      mongoClient.unref()
-      return mongoClient.dropDatabase()
-    })
-}
-
 describe('user', () => {
   before('drop mongo', () => {
-    return dropMongo()
+    return MongoClient.connect(configuration.USER_MONGO_URL)
+      .then(mongoClient => {
+        mongoClient.unref()
+        return mongoClient.dropDatabase()
+      })
   })
   before('create fastify instance', (done) => {
     fastify = Fastify({ level: 'silent' })

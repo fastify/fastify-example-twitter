@@ -20,12 +20,12 @@ module.exports = function (fastify, opts, next) {
       decorateWithUserClient,
       registerRoutes
     ],
-    null,
+    opts,
     next
   )
 }
 
-function registerEnv (a, done) {
+function registerEnv (data, done) {
   const envOpts = {
     schema: {
       type: 'object',
@@ -34,7 +34,8 @@ function registerEnv (a, done) {
         TWEET_MONGO_URL: { type: 'string', default: 'mongodb://localhost/tweet' },
         USER_MICROSERVICE_BASE_URL: { type: 'string', default: 'http://localhost:3001' }
       }
-    }
+    },
+    data: data
   }
   this.register(require('fastify-env'), envOpts, done)
 }
@@ -93,8 +94,8 @@ function registerRoutes (a, done) {
 
   this.post('/api/tweet', tweetSchema, async function (req, reply) {
     const { text } = req.body
-    const tweet = await tweetService.addTweet(req.user, text)
-    return tweet
+    await tweetService.addTweet(req.user, text)
+    reply.code(204)
   })
 
   this.get('/api/tweet', async function (req, reply) {

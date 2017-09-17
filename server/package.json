@@ -26,6 +26,7 @@
     "fastify-plugin": "^0.1.1",
     "mocha": "^3.5.3",
     "mongodb": "^2.2.31",
+    "nock": "^9.0.14",
     "request": "^2.81.0",
     "shot": "^3.4.2",
     "snazzy": "^7.0.0",

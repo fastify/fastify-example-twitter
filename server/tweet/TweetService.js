@@ -13,13 +13,11 @@ class TweetService {
   }
 
   async addTweet (user, text) {
-    const writeResult = await this.tweetCollection.insert({
+    await this.tweetCollection.insert({
       user,
       text,
       createdAt: new Date()
     })
-
-    return writeResult
   }
 }
 
