@@ -2,7 +2,7 @@
 
 The aim of this project is to show how `fastify` can be used.
 
-**NB:** I don't pretend to teach you anything: this is my personal `fastify` usage!
+**NB:** this is my personal `fastify` usage, but if you want to contribute, do it!
 
 ## Run
 
