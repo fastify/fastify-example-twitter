@@ -53,7 +53,7 @@ function decorateWithTweetCollection (a, done) {
 }
 
 function registerMongoSetup (a, done) {
-  this.register(require('./mongoCollectionSetup'), done)
+  require('./mongoCollectionSetup')(this.mongo.db, this.tweetCollection, done)
 }
 
 function decorateWithTweetService (a, done) {

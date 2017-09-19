@@ -70,7 +70,7 @@ function registerJwt (a, done) {
 }
 
 function registerMongoSetup (a, done) {
-  this.register(require('./mongoCollectionSetup'), done)
+  require('./mongoCollectionSetup')(this.mongo.db, this.userCollection, done)
 }
 
 function decorateWithUserService (a, done) {

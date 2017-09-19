@@ -1,11 +1,7 @@
 'use strict'
 
-const fp = require('fastify-plugin')
-
-module.exports = fp(function (fastify, opts, next) {
-  const { db } = fastify.mongo
-
-  const {name: collectionName} = fastify.tweetCollection.s
+module.exports = function (db, tweetCollection, next) {
+  const {name: collectionName} = tweetCollection.s
 
   db.createCollection(collectionName, err => {
     if (err) return next(err)
@@ -19,7 +15,7 @@ module.exports = fp(function (fastify, opts, next) {
     }, err => {
       if (err) return next(err)
 
-      fastify.tweetCollection.createIndex({ user: 1 }, next)
+      tweetCollection.createIndex({ user: 1 }, next)
     })
   })
-})
+}
