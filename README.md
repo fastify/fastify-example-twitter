@@ -2,7 +2,7 @@
 
 The aim of this project is to show how `fastify` can be used.
 
-**NB:** this is my personal `fastify` usage, but if you want to contribute, do it!
+**NB:** This project should be considered WIP and it does not reflect the best way we think fastify should be used, but it's rather an experiment to help driving fastify.
 
 ## Run
 
@@ -101,4 +101,4 @@ Now you have spitted the code into multiple microservices without doing nothing!
 - [ ] Provide a Dockerfile for serving static file when splitting into multiple microservices
 - [ ] Use `fastify-react` for react serve side rendering
 - [x] Better UI
-- [ ] More better UI
+- [ ] Even better UI
