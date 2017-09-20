@@ -57,3 +57,8 @@ typings/
 # dotenv environment variables file
 .env
 
+# I don't like!
+package-lock.json
+
+# frontend build
+build
