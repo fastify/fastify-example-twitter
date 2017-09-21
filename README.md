@@ -24,37 +24,39 @@ cd server && npm start # in another terminal
 
 ## Backend
 
-The backend is splitted into two plugins:
+The backend is splitted into plugins:
 - *user*: user authentication / user database
 - *tweet*: tweet storage
+- *follow*: follow storage
 
 Thankfully to `fastify-env`, each plugin describes the own configuration dependency and it's completely independent!
 
 `fastify-swagger` plugin is used to provide the swagger file.
 
 All plugins use `fastify-mongodb` for the data persistence.
+For the follow plugin the data is stored in redis thankfully to `fastify-redis`.
 
 Each plugins has the same structure:
-- `mongoCollectionSetup.js` that adds [mongodb schema validator](https://docs.mongodb.com/manual/core/document-validation/) and the indexes.
+- `mongoCollectionSetup.js` that adds [mongodb schema validator](https://docs.mongodb.com/manual/core/document-validation/) and the indexes if needed.
 - `schemas.js` that describes the [`fastify` schemas](https://github.com/fastify/fastify/blob/master/docs/Validation-And-Serialize.md)
 - `*Service.js` that implements the plugin business logic
 - `index.js` that exports the routes as a [`fastify` plugin](https://github.com/fastify/fastify/blob/master/docs/Plugins.md) and builds the setup
 
+The communication between the plugin, some HTTP requests are made internally.
+The user authentication is made through JSON Web Token using `fastify-jwt`.
+This token is used to identify the user between plugins.
+
 ### User plugin
 
-This plugin exports some APIs:
-- `/api/register` makes the sign up
-- `/api/login` makes the login
-- `/api/me` returns the public user properties given a jwt
-- `/api/search` returns a list of user that match the query
-
-The user authentication is made using `fastify-jwt`. So the client in the browser side should use the json web token returned by `/api/login` for contacting the authenticated APIs.
+This plugin registers some APIs in order to register, login, search and get a profile for an user
 
 ### Tweet plugin
 
-This plugin registers two APIs: `/api/tweet` in `GET` and `POST` for the tweet fetching and creation.
+This plugin stores the tweets and allows you to retrieve the tweets of an user.
 
-This plugin contacts the user plugin for checking the json web token. For do this, a HTTP call is made internally.
+### Follow plugin
+
+This plugin tracks the following and the followers implementing the flow explained [here](https://redis.io/topics/twitter-clone)
 
 ## Frontend
 
@@ -90,15 +92,21 @@ cd server
 fastify --port 3006 --custom 'USER_MICROSERVICE_BASE_URL=http://localhost:3005' tweet/index.js
 ```
 
+Shell3:
+```bash
+cd server
+fastify --port 3007 --custom 'USER_MICROSERVICE_BASE_URL=http://localhost:3005' follow/index.js
+```
+
 Now you have spitted the code into multiple microservices without doing nothing!
 
 ## TODO
 
-- [ ] Search users
-- [ ] Follow microservices for following and unfollowing other users
+- [x] Search users
+- [x] Follow microservices for following and unfollowing other users
 - [ ] Better test
 - [ ] Better README.md
-- [ ] Provide a Dockerfile for serving static file when splitting into multiple microservices
+- [ ] Use Docker compose
 - [ ] Use `fastify-react` for react serve side rendering
 - [x] Better UI
 - [ ] Even better UI
