@@ -32,15 +32,8 @@ class UserService {
     return this.jwt.sign(user)
   }
 
-  async me (jwt) {
-    try {
-      this.jwt.verify(jwt)
-    } catch (e) {
-      throw Boom.unauthorized()
-    }
-
-    const { username } = this.jwt.decode(jwt)
-    const users = await this.userCollection.find({ username }, {password: 0}).toArray()
+  async getProfile (_id) {
+    const users = await this.userCollection.find({ _id }, {password: 0}).toArray()
     return users[0]
   }
 
@@ -50,6 +43,16 @@ class UserService {
     }
     const users = await this.userCollection.find(query, {password: 0}).limit(5).toArray()
     return users
+  }
+
+  decode (jwt) {
+    try {
+      this.jwt.verify(jwt)
+    } catch (e) {
+      throw Boom.unauthorized()
+    }
+
+    return this.jwt.decode(jwt)
   }
 }
 

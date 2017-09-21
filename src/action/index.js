@@ -19,7 +19,16 @@ import {
   POST_TWEET_FAILED,
 
   SEARCH_SUCCESS,
-  SEARCH_FAILED
+  SEARCH_FAILED,
+
+  MY_FOLLOWING_SUCCESS,
+
+  USER_TWEET_SUCCESS,
+
+  USER_SUCCESS,
+
+  FOLLOWER_SUCCESS,
+  FOLLOWING_SUCCESS
  } from './actionTypes'
 import axios from 'axios'
 
@@ -33,10 +42,7 @@ export const makeLogin = (username, password) => dispatch => {
   dispatch(doingLogin())
   return axios.post('/api/login', { username, password })
     .then((response) => response.data)
-    .then(body => {
-      axios.defaults.headers.common['Authorization'] = 'Bearer ' + body.jwt
-      dispatch(loginSuccess(body))
-    })
+    .then(body => dispatch(loginSuccess(body)))
     .catch(error => dispatch(loginFailed(error)))
 }
 
@@ -92,7 +98,55 @@ const searchSuccess = users => ({ type: SEARCH_SUCCESS, users })
 const searchFail = () => ({ type: SEARCH_FAILED })
 export const search = searchText => dispatch => {
   return axios.get('/api/search', { params: { search: searchText } })
-    .then((response) => response.data)
-    .then(body => dispatch(searchSuccess(body)))
+    .then(response => response.data)
+    .then(users => dispatch(searchSuccess(users)))
+    .then(() => dispatch(getMyFollowing()))
     .catch(error => dispatch(searchFail(error)))
+}
+
+const myFollowing = users => ({ type: MY_FOLLOWING_SUCCESS, users })
+export const getMyFollowing = () => dispatch => {
+  return axios.get('/api/following/me')
+    .then(response => response.data)
+    .then(users => dispatch(myFollowing(users)))
+}
+
+export const follow = otherUserId => dispatch => {
+  return axios.post('/api/follow', { userId: otherUserId })
+    .then(response => response.data)
+    .then(() => dispatch(getMyFollowing()))
+}
+
+export const unfollow = otherUserId => dispatch => {
+  return axios.post('/api/unfollow', { userId: otherUserId })
+    .then(response => response.data)
+    .then(() => dispatch(getMyFollowing()))
+}
+
+const userTweetSuccess = (userId, tweets) => ({type: USER_TWEET_SUCCESS, userId, tweets})
+export const getUserTweets = userId => dispatch => {
+  return axios.get('/api/tweet/' + userId)
+    .then(response => response.data)
+    .then(tweets => dispatch(userTweetSuccess(userId, tweets)))
+}
+
+const userSuccess = ({_id, username}) => ({type: USER_SUCCESS, username, _id})
+export const getUser = userId => dispatch => {
+  return axios.get('/api/user/' + userId)
+    .then(response => response.data)
+    .then(user => dispatch(userSuccess(user)))
+}
+
+const followerSuccess = (userId, followers) => ({type: FOLLOWER_SUCCESS, userId, followers})
+export const getFollowers = userId => dispatch => {
+  return axios.get('/api/follower/' + userId)
+    .then(response => response.data)
+    .then(userIds => dispatch(followerSuccess(userId, userIds)))
+}
+
+const followingSuccess = (userId, following) => ({type: FOLLOWING_SUCCESS, userId, following})
+export const getFollowings = userId => dispatch => {
+  return axios.get('/api/following/' + userId)
+    .then(response => response.data)
+    .then(userIds => dispatch(followingSuccess(userId, userIds)))
 }

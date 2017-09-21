@@ -24,3 +24,16 @@ export const POST_TWEET_FAILED = 'POST_TWEET_FAILED'
 // Search
 export const SEARCH_SUCCESS = 'SEARCH_SUCCESS'
 export const SEARCH_FAILED = 'SEARCH_FAILED'
+
+// My following
+export const MY_FOLLOWING_SUCCESS = 'MY_FOLLOWING_SUCCESS'
+
+// User tweets
+export const USER_TWEET_SUCCESS = 'USER_TWEET_SUCCESS'
+
+// User profile
+export const USER_SUCCESS = 'USER_SUCCESS'
+
+// Followers
+export const FOLLOWER_SUCCESS = 'FOLLOWER_SUCCESS'
+export const FOLLOWING_SUCCESS = 'FOLLOWING_SUCCESS'

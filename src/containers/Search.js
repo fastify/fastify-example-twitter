@@ -1,8 +1,9 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
+import { Link, Redirect } from 'react-router-dom'
 
-import { search } from '../action'
+import { search, follow, unfollow } from '../action'
 
 import Form from 'muicss/lib/react/form'
 import Input from 'muicss/lib/react/input'
@@ -37,9 +38,31 @@ class SearchForm extends React.Component {
   }
 }
 
-const UserList = ({users}) => {
+const UserRow = ({_id, username, label, onClick, goToUserPage}) => {
+  const onFollowButtonClicked = e => {
+    e.preventDefault()
+    onClick(_id)
+    return false
+  }
+  return <Link to={'/user/' + _id}>
+    <Panel>
+      <span>{username}</span>
+      <Button className='mui--pull-right' color='primary' onClick={onFollowButtonClicked}>{label}</Button>
+    </Panel>
+  </Link>
+}
+
+const UserList = ({users, followings, onUnfollow, onFollow}) => {
   return <div>{
-    users.map(user => <Panel key={user._id}>{user.username}</Panel>)
+    users.map(user => {
+      const isFollowing = followings.includes(user._id)
+      const buttonLabel = isFollowing ? 'unfollow' : 'follow'
+      const onClick = isFollowing ? onUnfollow : onFollow
+      return <UserRow {...user}
+        key={user._id}
+        label={buttonLabel}
+        onClick={onClick} />
+    })
   }</div>
 }
 
@@ -69,6 +92,8 @@ class Search extends React.Component {
   }
 
   render () {
+    if (!this.props.isLogged) return <Redirect to='/login' />
+
     const searchingLoader = this.state.searching
       ? <p>Loading...</p>
       : ''
@@ -82,7 +107,11 @@ class Search extends React.Component {
             </Col>
           </Row>
           { searchingLoader }
-          <UserList users={this.props.users} />
+          <UserList
+            users={this.props.users}
+            followings={this.props.followings}
+            onUnfollow={this.props.onUnfollow}
+            onFollow={this.props.onFollow} />
         </Container>
       </div>
     )
@@ -96,13 +125,17 @@ Search.propTypes = {
 
 const mapStateToProps = (state) => {
   return {
-    users: state.search.users
+    users: state.search.users,
+    followings: state.myFollowing.users,
+    isLogged: !!state.user.jwt
   }
 }
 
 const mapDispatchToProps = (dispatch, a, b, c) => {
   return {
-    onSearch: searchText => dispatch(search(searchText))
+    onSearch: searchText => dispatch(search(searchText)),
+    onFollow: otherId => dispatch(follow(otherId)),
+    onUnfollow: otherId => dispatch(unfollow(otherId))
   }
 }
 

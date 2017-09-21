@@ -82,8 +82,24 @@ const search = {
   }
 }
 
+const getProfile = {
+  schema: {
+    params: {
+      type: 'object',
+      required: ['userId'],
+      properties: {
+        userId: {
+          type: 'string',
+          pattern: '^[0-9a-fA-F]{24}'
+        }
+      }
+    }
+  }
+}
+
 module.exports = {
   registration,
   login,
-  search
+  search,
+  getProfile
 }

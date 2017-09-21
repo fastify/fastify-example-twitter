@@ -5,7 +5,8 @@ const serie = require('fastseries')()
 const {
   login: loginSchema,
   registration: registrationSchema,
-  search: searchSchema
+  search: searchSchema,
+  getProfile: getProfileSchema
 } = require('./schemas')
 const UserService = require('./UserService')
 
@@ -81,6 +82,8 @@ function decorateWithUserService (a, done) {
 
 function registerRoutes (a, done) {
   const { userService } = this
+  const { ObjectId } = this.mongo
+
   this.post('/api/login', loginSchema, async function (req, reply) {
     const { username, password } = req.body
     const jwt = await userService.login(username, password)
@@ -96,7 +99,13 @@ function registerRoutes (a, done) {
 
   this.get('/api/me', async function (req, reply) {
     const jwt = (req.req.headers.authorization || '').substr(7)
-    const user = await userService.me(jwt)
+    const decoded = userService.decode(jwt)
+    const user = await userService.getProfile(ObjectId.createFromHexString(decoded._id))
+    return user
+  })
+
+  this.get('/api/user/:userId', getProfileSchema, async function (req, reply) {
+    const user = await userService.getProfile(ObjectId.createFromHexString(req.params.userId))
     return user
   })
 

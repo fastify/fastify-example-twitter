@@ -99,7 +99,12 @@ function registerRoutes (a, done) {
   })
 
   this.get('/api/tweet', async function (req, reply) {
-    const tweets = await tweetService.fetchTweets(req.user)
+    const tweets = await tweetService.fetchTweets(req.user._id)
+    return tweets
+  })
+
+  this.get('/api/tweet/:userId', async function (req, reply) {
+    const tweets = await tweetService.fetchTweets(req.params.userId)
     return tweets
   })
 

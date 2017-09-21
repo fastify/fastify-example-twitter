@@ -5,9 +5,9 @@ class TweetService {
     this.tweetCollection = tweetCollection
   }
 
-  async fetchTweets (user) {
+  async fetchTweets (userId) {
     const tweets = await this.tweetCollection.find({
-      'user._id': user._id
+      'user._id': userId
     }).sort({createdAt: -1}).toArray()
     return tweets
   }
