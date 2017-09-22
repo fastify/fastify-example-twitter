@@ -19,10 +19,9 @@
     "fastify-mongodb": "^0.1.0",
     "fastify-redis": "^0.1.0",
     "fastify-static": "^0.1.0",
-    "fastify-swagger": "github:fastify/fastify-swagger#first-implementation",
+    "fastify-swagger": "0.0.1",
     "fastseries": "^1.7.2",
-    "request-promise-native": "^1.0.4",
-    "request": "^2.81.0"
+    "simple-get": "^2.7.0"
   },
   "devDependencies": {
     "fastify-plugin": "^0.1.1",

@@ -17,7 +17,7 @@ module.exports = function (fastify, opts, next) {
       registerEnv,
       registerRedis,
       decorateWithTweetService,
-      decorateWithUserClient,
+      registerUserClient,
       registerRoutes
     ],
     opts,
@@ -52,22 +52,8 @@ function decorateWithTweetService (a, done) {
   done()
 }
 
-const request = require('request-promise-native')
-function decorateWithUserClient (a, done) {
-  this.decorate('userClient', {
-    getMe: (req) => {
-      return request({
-        uri: `${this.config.USER_MICROSERVICE_BASE_URL}/api/me`,
-        method: 'GET',
-        headers: {
-          authorization: req.req.headers.authorization
-        },
-        json: true
-      })
-    }
-  })
-
-  done()
+function registerUserClient (a, done) {
+  this.register(require('../userClient'), this.config, done)
 }
 
 function registerRoutes (a, done) {
