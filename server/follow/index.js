@@ -80,24 +80,20 @@ function registerRoutes (a, done) {
     reply.code(204)
   })
 
-  this.get('/api/following/me', async function (req, reply) {
-    const tweets = await followService.getFollowing(req.user._id)
-    return tweets
+  this.get('/api/following/me', function (req, reply) {
+    return followService.getFollowing(req.user._id)
   })
 
-  this.get('/api/followers/me', async function (req, reply) {
-    const tweets = await followService.getFollowers(req.user._id)
-    return tweets
+  this.get('/api/followers/me', function (req, reply) {
+    return followService.getFollowers(req.user._id)
   })
 
-  this.get('/api/following/:userId', async function (req, reply) {
-    const tweets = await followService.getFollowing(req.params.userId)
-    return tweets
+  this.get('/api/following/:userId', function (req, reply) {
+    return followService.getFollowing(req.params.userId)
   })
 
-  this.get('/api/followers/:userId', followersSchema, async function (req, reply) {
-    const tweets = await followService.getFollowers(req.params.userId)
-    return tweets
+  this.get('/api/followers/:userId', followersSchema, function (req, reply) {
+    return followService.getFollowers(req.params.userId)
   })
 
   done()
