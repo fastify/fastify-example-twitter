@@ -1,55 +1,35 @@
 'use strict'
 
-function follow (followService, meId, otherId) {
-  return Promise.all([
-    new Promise(function (resolve, reject) {
-      followService.redisClient.zadd(`following:${meId}`, Date.now(), otherId, function (err, result) {
-        if (err) return reject(err)
-        resolve(result)
-      })
-    }),
-    new Promise(function (resolve, reject) {
-      followService.redisClient.zadd(`followers:${otherId}`, Date.now(), meId, function (err, result) {
-        if (err) return reject(err)
-        resolve(result)
-      })
-    })
-  ])
-}
-
-function unfollow (followService, meId, otherId) {
-  return Promise.all([
-    new Promise(function (resolve, reject) {
-      followService.redisClient.zrem(`following:${meId}`, otherId, function (err, result) {
-        if (err) return reject(err)
-        resolve(result)
-      })
-    }),
-    new Promise(function (resolve, reject) {
-      followService.redisClient.zrem(`followers:${otherId}`, meId, function (err, result) {
-        if (err) return reject(err)
-        resolve(result)
-      })
-    })
-  ])
-}
-
-function getFollowing (followService, meId) {
+function execRedis (redisClient, method, args) {
   return new Promise(function (resolve, reject) {
-    followService.redisClient.zrange(`following:${meId}`, 0, -1, function (err, result) {
+    args.push(function (err, result) {
       if (err) return reject(err)
       resolve(result)
     })
+    redisClient[method].apply(redisClient, args)
   })
 }
 
-function getFollowers (followService, otherId) {
-  return new Promise(function (resolve, reject) {
-    followService.redisClient.zrange(`followers:${otherId}`, 0, -1, function (err, result) {
-      if (err) return reject(err)
-      resolve(result)
-    })
-  })
+function follow (redisClient, meId, otherId) {
+  return Promise.all([
+    execRedis(redisClient, 'zadd', [`following:${meId}`, Date.now(), otherId]),
+    execRedis(redisClient, 'zadd', [`followers:${otherId}`, Date.now(), meId])
+  ])
+}
+
+function unfollow (redisClient, meId, otherId) {
+  return Promise.all([
+    execRedis(redisClient, 'zrem', [`following:${meId}`, otherId]),
+    execRedis(redisClient, 'zrem', [`followers:${otherId}`, meId])
+  ])
+}
+
+function getFollowing (redisClient, meId) {
+  return execRedis(redisClient, 'zrange', [`following:${meId}`, 0, -1])
+}
+
+function getFollowers (redisClient, otherId) {
+  return execRedis(redisClient, 'zrange', [`followers:${otherId}`, 0, -1])
 }
 
 class FollowService {
@@ -58,19 +38,19 @@ class FollowService {
   }
 
   follow (meId, otherId) {
-    return follow(this, meId, otherId)
+    return follow(this.redisClient, meId, otherId)
   }
 
   unfollow (meId, otherId) {
-    return unfollow(this, meId, otherId)
+    return unfollow(this.redisClient, meId, otherId)
   }
 
   getFollowing (meId) {
-    return getFollowing(this, meId)
+    return getFollowing(this.redisClient, meId)
   }
 
   getFollowers (otherId) {
-    return getFollowers(this, otherId)
+    return getFollowers(this.redisClient, otherId)
   }
 }
 
