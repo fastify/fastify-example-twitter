@@ -1,35 +1,35 @@
 {
-  "name": "fastify-example-twitter",
-  "version": "0.1.0",
-  "private": true,
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint": "standard | snazzy",
+    "unit": "mocha */test/*.test.js",
+    "test": "npm run lint && npm run unit",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "axios": "^0.16.2",
     "boom": "^5.2.0",
+    "fastify": "^0.28.2",
+    "fastify-env": "^0.2.0",
     "fastify-jwt": "^0.1.0",
     "fastify-mongodb": "^0.1.0",
-    "history": "^4.7.2",
-    "muicss": "^0.9.25",
-    "prop-types": "^15.5.10",
-    "react": "^15.6.1",
-    "react-bootstrap": "^0.31.3",
-    "react-dom": "^15.6.1",
-    "react-redux": "^5.0.6",
-    "react-router-dom": "^4.2.2",
-    "react-router-redux": "^5.0.0-alpha.6",
-    "react-scripts": "1.0.13",
-    "redux": "^3.7.2",
-    "redux-logger": "^3.0.6",
-    "redux-thunk": "^2.2.0"
+    "fastify-redis": "^0.1.0",
+    "fastify-static": "^0.1.0",
+    "fastify-swagger": "fastify/fastify-swagger#first-implementation",
+    "fastseries": "^1.7.2",
+    "simple-get": "^2.7.0"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
-  },
-  "proxy": {
-    "/api": {
-      "target": "http://localhost:3001"
-    }
+  "devDependencies": {
+    "fastify-plugin": "^0.1.1",
+    "mocha": "^3.5.3",
+    "mongodb": "^2.2.31",
+    "nock": "^9.0.14",
+    "shot": "^3.4.2",
+    "snazzy": "^7.0.0",
+    "standard": "^10.0.3"
   }
 }
