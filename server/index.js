@@ -4,7 +4,7 @@ const path = require('path')
 
 const fastify = require('fastify')({
   logger: {
-    level: 'info'
+    level: 'trace'
   }
 })
 
@@ -27,6 +27,10 @@ fastify.register(require('./user'), err => {
 })
 
 fastify.register(require('./tweet'), err => {
+  if (err) throw err
+})
+
+fastify.register(require('./follow'), err => {
   if (err) throw err
 })
 

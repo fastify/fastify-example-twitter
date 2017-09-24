@@ -13,21 +13,21 @@
   "license": "ISC",
   "dependencies": {
     "boom": "^5.2.0",
-    "fastify": "^0.27.0",
+    "fastify": "^0.28.2",
     "fastify-env": "^0.2.0",
     "fastify-jwt": "^0.1.0",
     "fastify-mongodb": "^0.1.0",
+    "fastify-redis": "^0.1.0",
     "fastify-static": "^0.1.0",
-    "fastify-swagger": "github:fastify/fastify-swagger#first-implementation",
+    "fastify-swagger": "0.0.1",
     "fastseries": "^1.7.2",
-    "request-promise-native": "^1.0.4"
+    "simple-get": "^2.7.0"
   },
   "devDependencies": {
     "fastify-plugin": "^0.1.1",
     "mocha": "^3.5.3",
     "mongodb": "^2.2.31",
     "nock": "^9.0.14",
-    "request": "^2.81.0",
     "shot": "^3.4.2",
     "snazzy": "^7.0.0",
     "standard": "^10.0.3"

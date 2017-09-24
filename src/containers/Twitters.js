@@ -9,14 +9,8 @@ import Container from 'muicss/lib/react/container'
 import Row from 'muicss/lib/react/row'
 import Col from 'muicss/lib/react/col'
 import Textarea from 'muicss/lib/react/textarea'
-import Panel from 'muicss/lib/react/panel'
 
-const Tweet = ({_id, text, user}) => {
-  return <Panel>
-    <p>{text}</p>
-    <small className='mui--pull-right'>{user.username}</small>
-  </Panel>
-}
+import TweetList from '../components/TweetList'
 
 class TweetForm extends React.Component {
   constructor () {
@@ -55,13 +49,7 @@ class Twitters extends React.Component {
     if (isFetching) return <div>Loading tweets...</div>
 
     const tweetForm = <TweetForm onNewTweet={text => this.props.onNewTweet(text)} />
-    const tweetStream = <Container fluid>
-      <Row>
-        <Col md='4' md-offset='4'>
-          { tweets.map(t => <Tweet key={t._id} {...t} />) }
-        </Col>
-      </Row>
-    </Container>
+    const tweetStream = <TweetList tweets={tweets} />
     const noTweetsBanner = tweets.length === 0
       ? <div className='mui--text-center mui--text-dark mui--text-body2'>No tweet available, let is stating to write one!</div>
       : ''

@@ -15,6 +15,7 @@ import Signup from './containers/Signup'
 import Dashboard from './containers/Dashboard'
 import Search from './containers/Search'
 import AppHeader from './containers/AppHeader'
+import UserPage from './containers/UserPage'
 
 import reducers from './reducers'
 
@@ -43,6 +44,7 @@ class App extends Component {
           <Route exact path='/login' component={Login} />
           <Route exact path='/signup' component={Signup} />
           <Route exact path='/search' component={Search} />
+          <Route exact path='/user/:userId' component={UserPage} />
           <Route path='/' component={Dashboard} />
           <Route component={Dashboard} />
         </Switch>
