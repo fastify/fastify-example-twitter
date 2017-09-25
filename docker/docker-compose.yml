@@ -1,0 +1,24 @@
+version: '3'
+services:
+  user:
+    build:
+      context: .
+      dockerfile: user.Dockerfile
+    ports:
+      - "3005:3005"
+  tweet:
+    build:
+      context: .
+      dockerfile: tweet.Dockerfile
+    ports:
+      - "3006:3006"
+  follow:
+    build:
+      context: .
+      dockerfile: follow.Dockerfile
+    ports:
+     - "3007:3007"
+  mongo:
+    image: "mongo:3.4"
+  redis:
+   image: "redis:alpine"
