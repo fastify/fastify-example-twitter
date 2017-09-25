@@ -17,6 +17,7 @@
     "fastify-env": "^0.2.0",
     "fastify-jwt": "^0.1.0",
     "fastify-mongodb": "^0.1.0",
+    "fastify-plugin": "^0.1.1",
     "fastify-redis": "^0.1.0",
     "fastify-static": "^0.1.0",
     "fastify-swagger": "fastify/fastify-swagger#first-implementation",
@@ -24,7 +25,6 @@
     "simple-get": "^2.7.0"
   },
   "devDependencies": {
-    "fastify-plugin": "^0.1.1",
     "mocha": "^3.5.3",
     "mongodb": "^2.2.31",
     "nock": "^9.0.14",
