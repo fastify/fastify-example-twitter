@@ -9,17 +9,17 @@ The aim of this project is to show how `fastify` can be used.
 ### Pseudo-production
 ```bash
 # build frontend
-npm build
+cd frontend && npm build && cd ..
 # start backend
-cd server && npm start
+npm start
 ```
 
 ### Development
 ```bash
 # start frontend server
-npm start
+cd frontend && npm start
 # start backend
-cd server && npm start # in another terminal
+npm start # in another terminal
 ```
 
 ## Backend
@@ -28,6 +28,7 @@ The backend is splitted into plugins:
 - *user*: user authentication / user database
 - *tweet*: tweet storage
 - *follow*: follow storage
+- *userClient*: http client to contact the user service
 
 Thankfully to `fastify-env`, each plugin describes the own configuration dependency and it's completely independent!
 
@@ -70,31 +71,29 @@ No UX or UI study are made (please PR!)
 ## Split for build microservices
 
 This code is designed to be splitted into multiple parts.
-For simplicity we'll split it into two components:
+For simplicity we'll split it into components:
 - user
 - tweet
+- follow
 
 ```bash
 # build frontend
-npm build
+cd frontend && npm build && cd ..
 npm -g install fastify-cli fastify
 ```
 
 Shell1:
 ```bash
-cd server
 fastify --port 3005 user/index.js
 ```
 
 Shell2:
 ```bash
-cd server
 fastify --port 3006 --custom 'USER_MICROSERVICE_BASE_URL=http://localhost:3005' tweet/index.js
 ```
 
 Shell3:
 ```bash
-cd server
 fastify --port 3007 --custom 'USER_MICROSERVICE_BASE_URL=http://localhost:3005' follow/index.js
 ```
 

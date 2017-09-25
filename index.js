@@ -35,7 +35,7 @@ fastify.register(require('./follow'), err => {
 })
 
 fastify.register(require('fastify-static'), {
-  root: path.join(__dirname, '..', 'build'),
+  root: path.join(__dirname, 'frontend', 'build'),
   prefix: '/'
 })
 
