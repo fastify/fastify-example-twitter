@@ -5,7 +5,7 @@ const tweetPlugin = require('../index')
 
 const assert = require('assert')
 const nock = require('nock')
-const MongoClient = require('mongodb').MongoClient
+const { MongoClient } = require('mongodb')
 const Fastify = require('fastify')
 const fp = require('fastify-plugin')
 
@@ -38,7 +38,7 @@ describe('tweet', () => {
   })
 
   it('add a tweet + get tweets', () => {
-    const USER_ID = 'the-user-id'
+    const USER_ID = '59cfce2748c1f7eb59490b0a'
     const USERNAME = 'the-user-1'
     const TWEET_TEXT = 'the tweet text!'
     const JSON_WEB_TOKEN = 'the-json-web-token'
@@ -46,7 +46,7 @@ describe('tweet', () => {
     const getMeNockScope = nock('http://localhost:3001')
       .replyContentLength()
       .get('/api/user/me')
-      .twice()
+      .times(3)
       .reply(200, {
         _id: USER_ID,
         username: USERNAME
@@ -87,7 +87,28 @@ describe('tweet', () => {
             })
             assert.deepEqual(body[0].text, TWEET_TEXT)
 
-            getMeNockScope.done()
+            return makeRequest(fastify, {
+              method: 'GET',
+              url: '/' + USER_ID,
+              headers: {
+                'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+              }
+            })
+              .then(res => {
+                assert.equal(200, res.statusCode, res.payload)
+
+                const body = JSON.parse(res.payload)
+
+                assert.equal(1, body.length, res.payload)
+                assert.ok(body[0]._id)
+                assert.deepEqual(body[0].user, {
+                  _id: USER_ID,
+                  username: USERNAME
+                })
+                assert.deepEqual(body[0].text, TWEET_TEXT)
+
+                getMeNockScope.done()
+              })
           })
       })
   })

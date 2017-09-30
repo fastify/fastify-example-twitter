@@ -67,8 +67,7 @@ const tweetsFailed = error => ({ type: TWEETS_FAILD, error })
 export const askTweets = () => dispatch => {
   dispatch(requestingTweets())
 
-  // return Promise.resolve({data: tweets})
-  return axios.get('/api/tweet')
+  return axios.get('/api/timeline')
     .then((response) => response.data)
     .then(body => dispatch(tweetsSuccess(body)))
     .catch(error => dispatch(tweetsFailed(error)))

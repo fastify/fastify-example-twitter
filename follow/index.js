@@ -63,7 +63,9 @@ function registerRoutes (a, done) {
     try {
       req.user = await userClient.getMe(req)
     } catch (e) {
-      return done(e)
+      if (!reply.store.config.allowUnlogged) {
+        return done(e)
+      }
     }
     done()
   })
@@ -88,7 +90,7 @@ function registerRoutes (a, done) {
     return followService.getFollowers(req.user._id)
   })
 
-  this.get('/following/:userId', function (req, reply) {
+  this.get('/following/:userId', { config: { allowUnlogged: true } }, function (req, reply) {
     return followService.getFollowing(req.params.userId)
   })
 

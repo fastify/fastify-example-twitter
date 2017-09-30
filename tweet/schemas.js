@@ -13,6 +13,24 @@ const tweet = {
   }
 }
 
+const getTweets = {
+  schema: {
+    params: {
+      type: 'object',
+      required: [ 'userIds' ],
+      properties: {
+        userIds: {
+          type: 'string',
+          pattern: '^[0-9a-fA-F]{24}(,[0-9a-fA-F]{24})?'
+        }
+      },
+      additionalProperties: false
+    }
+  },
+  config: { allowUnlogged: true }
+}
+
 module.exports = {
-  tweet
+  tweet,
+  getTweets
 }
