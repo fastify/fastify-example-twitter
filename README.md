@@ -28,7 +28,8 @@ The backend is splitted into plugins:
 - *user*: user authentication / user database
 - *tweet*: tweet storage
 - *follow*: follow storage
-- *userClient*: http client to contact the user service
+- *timeline*: timeline tweets
+- **Client*: clients to connect to other services
 
 Thankfully to `fastify-env`, each plugin describes the own configuration dependency and it's completely independent!
 
@@ -59,6 +60,10 @@ This plugin stores the tweets and allows you to retrieve the tweets of an user.
 
 This plugin tracks the following and the followers implementing the flow explained [here](https://redis.io/topics/twitter-clone)
 
+### Timeline plugin
+
+This plugin aggregates informations from `tweet` and `follow` plugin in order to return the tweet timeline
+
 ## Frontend
 
 The frontend side has been done only to show a simple UI for avoiding the manual curls.
@@ -68,40 +73,14 @@ It is built using `react` + `redux` stack.
 No UX or UI study are made (please PR!)
 
 
-## Split for build microservices
+## Split for building microservices
 
-This code is designed to be splitted into multiple parts.
-For simplicity we'll split it into components:
-- user
-- tweet
-- follow
-
-```bash
-# build frontend
-cd frontend && npm build && cd ..
-npm -g install fastify-cli fastify
-```
-
-Shell1:
-```bash
-fastify --port 3005 user/index.js
-```
-
-Shell2:
-```bash
-fastify --port 3006 --custom 'USER_MICROSERVICE_BASE_URL=http://localhost:3005' tweet/index.js
-```
-
-Shell3:
-```bash
-fastify --port 3007 --custom 'USER_MICROSERVICE_BASE_URL=http://localhost:3005' follow/index.js
-```
-
-Now you have spitted the code into multiple microservices without doing nothing!
+**TODO**: Waiting for docker compose!
 
 ## TODO
 
 - [x] Search users
+- [x] Timeline
 - [x] Follow microservices for following and unfollowing other users
 - [ ] Better test
 - [ ] Better README.md
