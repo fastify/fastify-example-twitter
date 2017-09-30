@@ -13,7 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "boom": "^5.2.0",
-    "fastify": "^0.28.2",
+    "fastify": "^0.29.0",
     "fastify-env": "^0.2.0",
     "fastify-jwt": "^0.1.0",
     "fastify-mongodb": "^0.1.0",

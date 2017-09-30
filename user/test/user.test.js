@@ -40,7 +40,7 @@ describe('user', () => {
     const PASSWORD = 'the-password'
     return makeRequest(fastify, {
       method: 'POST',
-      url: '/api/register',
+      url: '/register',
       headers: {
         'Content-type': 'application/json'
       },
@@ -55,7 +55,7 @@ describe('user', () => {
       .then(() => {
         return makeRequest(fastify, {
           method: 'POST',
-          url: '/api/login',
+          url: '/login',
           headers: {
             'Content-type': 'application/json'
           },
@@ -73,7 +73,7 @@ describe('user', () => {
           .then(jwt => {
             return makeRequest(fastify, {
               method: 'GET',
-              url: '/api/me',
+              url: '/me',
               headers: {
                 'Content-type': 'application/json',
                 'Authorization': 'Baerer ' + jwt
@@ -95,7 +95,7 @@ describe('user', () => {
     return Promise.all(USERNAMES.map(username => {
       return makeRequest(fastify, {
         method: 'POST',
-        url: '/api/register',
+        url: '/register',
         headers: {
           'Content-type': 'application/json'
         },
@@ -111,7 +111,7 @@ describe('user', () => {
       .then(() => {
         return makeRequest(fastify, {
           method: 'GET',
-          url: '/api/search?search=-foo-'
+          url: '/search?search=-foo-'
         })
           .then(res => {
             assert.equal(200, res.statusCode, res.payload)

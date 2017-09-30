@@ -40,7 +40,7 @@ const loginFailed = error => ({ type: LOGIN_FAILED, error: error.response.data.m
 
 export const makeLogin = (username, password) => dispatch => {
   dispatch(doingLogin())
-  return axios.post('/api/login', { username, password })
+  return axios.post('/api/user/login', { username, password })
     .then((response) => response.data)
     .then(body => dispatch(loginSuccess(body)))
     .catch(error => dispatch(loginFailed(error)))
@@ -52,7 +52,7 @@ const registerFailed = error => ({ type: REGISTER_FAILED, error: error.response.
 
 export const makeRegister = ({email, username, password}) => dispatch => {
   dispatch(doingRegister())
-  return axios.post('/api/register', { email, username, password })
+  return axios.post('/api/user/register', { email, username, password })
     .then((response) => response.data)
     .then(body => {
       dispatch(push('/login'))
@@ -97,7 +97,7 @@ export const logout = () => dispatch => {
 const searchSuccess = users => ({ type: SEARCH_SUCCESS, users })
 const searchFail = () => ({ type: SEARCH_FAILED })
 export const search = searchText => dispatch => {
-  return axios.get('/api/search', { params: { search: searchText } })
+  return axios.get('/api/user/search', { params: { search: searchText } })
     .then(response => response.data)
     .then(users => dispatch(searchSuccess(users)))
     .then(() => dispatch(getMyFollowing()))
@@ -106,19 +106,19 @@ export const search = searchText => dispatch => {
 
 const myFollowing = users => ({ type: MY_FOLLOWING_SUCCESS, users })
 export const getMyFollowing = () => dispatch => {
-  return axios.get('/api/following/me')
+  return axios.get('/api/follow/following/me')
     .then(response => response.data)
     .then(users => dispatch(myFollowing(users)))
 }
 
 export const follow = otherUserId => dispatch => {
-  return axios.post('/api/follow', { userId: otherUserId })
+  return axios.post('/api/follow/follow', { userId: otherUserId })
     .then(response => response.data)
     .then(() => dispatch(getMyFollowing()))
 }
 
 export const unfollow = otherUserId => dispatch => {
-  return axios.post('/api/unfollow', { userId: otherUserId })
+  return axios.post('/api/follow/unfollow', { userId: otherUserId })
     .then(response => response.data)
     .then(() => dispatch(getMyFollowing()))
 }
@@ -139,14 +139,14 @@ export const getUser = userId => dispatch => {
 
 const followerSuccess = (userId, followers) => ({type: FOLLOWER_SUCCESS, userId, followers})
 export const getFollowers = userId => dispatch => {
-  return axios.get('/api/follower/' + userId)
+  return axios.get('/api/follow/follower/' + userId)
     .then(response => response.data)
     .then(userIds => dispatch(followerSuccess(userId, userIds)))
 }
 
 const followingSuccess = (userId, following) => ({type: FOLLOWING_SUCCESS, userId, following})
 export const getFollowings = userId => dispatch => {
-  return axios.get('/api/following/' + userId)
+  return axios.get('/api/follow/following/' + userId)
     .then(response => response.data)
     .then(userIds => dispatch(followingSuccess(userId, userIds)))
 }

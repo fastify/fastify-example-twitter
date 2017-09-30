@@ -68,31 +68,31 @@ function registerRoutes (a, done) {
     done()
   })
 
-  this.post('/api/follow', followSchema, async function (req, reply) {
+  this.post('/follow', followSchema, async function (req, reply) {
     const { userId } = req.body
     await followService.follow(req.user._id, userId)
     reply.code(204)
   })
 
-  this.post('/api/unfollow', unfollowSchema, async function (req, reply) {
+  this.post('/unfollow', unfollowSchema, async function (req, reply) {
     const { userId } = req.body
     await followService.unfollow(req.user._id, userId)
     reply.code(204)
   })
 
-  this.get('/api/following/me', function (req, reply) {
+  this.get('/following/me', function (req, reply) {
     return followService.getFollowing(req.user._id)
   })
 
-  this.get('/api/followers/me', function (req, reply) {
+  this.get('/followers/me', function (req, reply) {
     return followService.getFollowers(req.user._id)
   })
 
-  this.get('/api/following/:userId', function (req, reply) {
+  this.get('/following/:userId', function (req, reply) {
     return followService.getFollowing(req.params.userId)
   })
 
-  this.get('/api/followers/:userId', followersSchema, function (req, reply) {
+  this.get('/followers/:userId', followersSchema, function (req, reply) {
     return followService.getFollowers(req.params.userId)
   })
 

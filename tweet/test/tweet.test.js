@@ -45,7 +45,7 @@ describe('tweet', () => {
 
     const getMeNockScope = nock('http://localhost:3001')
       .replyContentLength()
-      .get('/api/me')
+      .get('/api/user/me')
       .twice()
       .reply(200, {
         _id: USER_ID,
@@ -54,7 +54,7 @@ describe('tweet', () => {
 
     return makeRequest(fastify, {
       method: 'POST',
-      url: '/api/tweet',
+      url: '/',
       headers: {
         'Content-type': 'application/json',
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
@@ -69,7 +69,7 @@ describe('tweet', () => {
       .then(() => {
         return makeRequest(fastify, {
           method: 'GET',
-          url: '/api/tweet',
+          url: '/',
           headers: {
             'Authorization': 'Bearer ' + JSON_WEB_TOKEN
           }

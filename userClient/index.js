@@ -12,7 +12,7 @@ module.exports = fp(function (fastify, opts, next) {
     getMe: function (req) {
       return new Promise(function (resolve, reject) {
         sget.concat({
-          url: `${opts.USER_MICROSERVICE_BASE_URL}/api/me`,
+          url: `${opts.USER_MICROSERVICE_BASE_URL}/api/user/me`,
           method: 'GET',
           headers: {
             authorization: req.req.headers.authorization

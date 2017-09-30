@@ -84,32 +84,32 @@ function registerRoutes (a, done) {
   const { userService } = this
   const { ObjectId } = this.mongo
 
-  this.post('/api/login', loginSchema, async function (req, reply) {
+  this.post('/login', loginSchema, async function (req, reply) {
     const { username, password } = req.body
     const jwt = await userService.login(username, password)
 
     return {jwt}
   })
 
-  this.post('/api/register', registrationSchema, async function (req, reply) {
+  this.post('/register', registrationSchema, async function (req, reply) {
     const { username, password } = req.body
     await userService.register(username, password)
     return {}
   })
 
-  this.get('/api/me', async function (req, reply) {
+  this.get('/me', async function (req, reply) {
     const jwt = (req.req.headers.authorization || '').substr(7)
     const decoded = userService.decode(jwt)
     const user = await userService.getProfile(ObjectId.createFromHexString(decoded._id))
     return user
   })
 
-  this.get('/api/user/:userId', getProfileSchema, async function (req, reply) {
+  this.get('/:userId', getProfileSchema, async function (req, reply) {
     const user = await userService.getProfile(ObjectId.createFromHexString(req.params.userId))
     return user
   })
 
-  this.get('/api/search', searchSchema, async function (req, reply) {
+  this.get('/search', searchSchema, async function (req, reply) {
     const { search } = req.query
     const users = await userService.search(search)
     return users

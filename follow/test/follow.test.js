@@ -44,7 +44,7 @@ describe('follow', () => {
 
     const getMeNockScope = nock('http://localhost:3001')
       .replyContentLength()
-      .get('/api/me')
+      .get('/api/user/me')
       .times(6)
       .reply(200, {
         _id: USER_ID,
@@ -55,7 +55,7 @@ describe('follow', () => {
 
     res = await makeRequest(fastify, {
       method: 'POST',
-      url: '/api/follow',
+      url: '/follow',
       headers: {
         'Content-type': 'application/json',
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
@@ -68,7 +68,7 @@ describe('follow', () => {
 
     res = await makeRequest(fastify, {
       method: 'GET',
-      url: '/api/following/me',
+      url: '/following/me',
       headers: {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
@@ -79,7 +79,7 @@ describe('follow', () => {
 
     res = await makeRequest(fastify, {
       method: 'GET',
-      url: `/api/followers/${OTHER_USER_ID}`,
+      url: `/followers/${OTHER_USER_ID}`,
       headers: {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
@@ -90,7 +90,7 @@ describe('follow', () => {
 
     res = await makeRequest(fastify, {
       method: 'POST',
-      url: '/api/unfollow',
+      url: '/unfollow',
       headers: {
         'Content-type': 'application/json',
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
@@ -103,7 +103,7 @@ describe('follow', () => {
 
     res = await makeRequest(fastify, {
       method: 'GET',
-      url: '/api/following/me',
+      url: '/following/me',
       headers: {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
@@ -114,7 +114,7 @@ describe('follow', () => {
 
     res = await makeRequest(fastify, {
       method: 'GET',
-      url: `/api/followers/${OTHER_USER_ID}`,
+      url: `/followers/${OTHER_USER_ID}`,
       headers: {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }

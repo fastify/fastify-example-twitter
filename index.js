@@ -1,14 +1,9 @@
 'use strict'
 
 const path = require('path')
+const serie = require('fastseries')()
 
-const fastify = require('fastify')({
-  logger: {
-    level: 'trace'
-  }
-})
-
-fastify.register(require('fastify-swagger'), {
+const swaggerOption = {
   swagger: {
     info: {
       title: 'Test swagger',
@@ -20,27 +15,38 @@ fastify.register(require('fastify-swagger'), {
     consumes: ['application/json'],
     produces: ['application/json']
   }
-})
+}
 
-fastify.register(require('./user'), err => {
-  if (err) throw err
-})
+function registerSwagger (unused, next) {
+  this.register(require('fastify-swagger'), swaggerOption, next)
+}
+function registerUser (unused, next) {
+  this.register(require('./user'), { prefix: '/api/user' }, next)
+}
+function registerTweet (unused, next) {
+  this.register(require('./tweet'), { prefix: '/api/tweet' }, next)
+}
+function registerFollow (unused, next) {
+  this.register(require('./follow'), { prefix: '/api/follow' }, next)
+}
+function registerStatic (unused, next) {
+  this.register(require('fastify-static'), {
+    root: path.join(__dirname, 'frontend', 'build'),
+    prefix: '/'
+  }, next)
+}
 
-fastify.register(require('./tweet'), err => {
-  if (err) throw err
-})
-
-fastify.register(require('./follow'), err => {
-  if (err) throw err
-})
-
-fastify.register(require('fastify-static'), {
-  root: path.join(__dirname, 'frontend', 'build'),
-  prefix: '/'
-})
-
-fastify.listen(3001, err => {
-  if (err) throw err
-  fastify.swagger()
-  console.log(`Server is up at http://localhost:${fastify.server.address().port}`)
-})
+module.exports = function (fastify, opts, next) {
+  serie(
+    fastify,
+    [
+      registerSwagger,
+      registerUser,
+      registerTweet,
+      registerFollow,
+      registerStatic
+    ],
+    opts,
+    next
+  )
+}
