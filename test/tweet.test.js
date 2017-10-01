@@ -1,7 +1,7 @@
 /* eslint-env node, mocha */
 'use strict'
 
-const tweetPlugin = require('../index')
+const tweetPlugin = require('../tweet')
 
 const assert = require('assert')
 const nock = require('nock')

@@ -1,7 +1,7 @@
 /* eslint-env node, mocha */
 'use strict'
 
-const userPlugin = require('../index')
+const userPlugin = require('../user')
 
 const assert = require('assert')
 const MongoClient = require('mongodb').MongoClient

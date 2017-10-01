@@ -1,7 +1,7 @@
 /* eslint-env node, mocha */
 'use strict'
 
-const followPlugin = require('../index')
+const followPlugin = require('../follow')
 
 const assert = require('assert')
 const nock = require('nock')

@@ -1,7 +1,7 @@
 /* eslint-env node, mocha */
 'use strict'
 
-const timelinePlugin = require('../index')
+const timelinePlugin = require('../timeline')
 
 const assert = require('assert')
 const nock = require('nock')
