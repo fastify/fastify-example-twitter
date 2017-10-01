@@ -24,11 +24,29 @@ npm start # in another terminal
 
 ## Backend
 
+### Architecture
+
+```
+
++------+   +-------+   +--------+  +----------+
+|      |   |       |   |        |  |          |
+| user |   | tweet |   | follow |  | timeline |
+|      |   |       |   |        |  |          |
++------+   +-------+   +--------+  +----------+
+   |           |           |            |
++---------------------------------------------+
+|                                             |
+|                    fastify                  |
+|                                             |
++---------------------------------------------+
+
+```
+
 The backend is splitted into plugins:
 - *user*: user authentication / user database
 - *tweet*: tweet storage
 - *follow*: follow storage
-- *timeline*: timeline tweets
+- *timeline*: timeline for homepage
 - **Client*: clients to connect to other services
 
 Thankfully to `fastify-env`, each plugin describes the own configuration dependency and it's completely independent!
