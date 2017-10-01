@@ -36,7 +36,7 @@ describe('timeline', () => {
     fastify.close(done)
   })
 
-  it('get timeline', () => {
+  it('get timeline', async () => {
     const USER_ID = 'the-user-id'
     const USERNAME = 'the-user-1'
     const JSON_WEB_TOKEN = 'the-json-web-token'
@@ -80,22 +80,20 @@ describe('timeline', () => {
       .get('/api/tweet/' + [ USER_ID_1, USER_ID_2, USER_ID_3, USER_ID ].join(','))
       .reply(200, followingTweets)
 
-    return makeRequest(fastify, {
+    const res = await makeRequest(fastify, {
       method: 'GET',
       url: '/',
       headers: {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-      .then(res => {
-        assert.equal(200, res.statusCode, res.payload)
+    assert.equal(200, res.statusCode, res.payload)
 
-        const body = JSON.parse(res.payload)
+    const body = JSON.parse(res.payload)
 
-        assert.equal(body.length, 4, res.payload)
-        assert.deepEqual(body, followingTweets)
+    assert.equal(body.length, 4, res.payload)
+    assert.deepEqual(body, followingTweets)
 
-        getMeNockScope.done()
-      })
+    getMeNockScope.done()
   })
 })

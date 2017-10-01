@@ -37,7 +37,7 @@ describe('tweet', () => {
     fastify.close(done)
   })
 
-  it('add a tweet + get tweets', () => {
+  it('add a tweet + get tweets', async () => {
     const USER_ID = '59cfce2748c1f7eb59490b0a'
     const USERNAME = 'the-user-1'
     const TWEET_TEXT = 'the tweet text!'
@@ -52,7 +52,7 @@ describe('tweet', () => {
         username: USERNAME
       })
 
-    return makeRequest(fastify, {
+    let res = await makeRequest(fastify, {
       method: 'POST',
       url: '/',
       headers: {
@@ -63,53 +63,38 @@ describe('tweet', () => {
         text: TWEET_TEXT
       })
     })
-      .then(res => {
-        assert.equal(204, res.statusCode, res.payload)
-      })
-      .then(() => {
-        return makeRequest(fastify, {
-          method: 'GET',
-          url: '/',
-          headers: {
-            'Authorization': 'Bearer ' + JSON_WEB_TOKEN
-          }
-        })
-          .then(res => {
-            assert.equal(200, res.statusCode, res.payload)
+    assert.equal(204, res.statusCode, res.payload)
 
-            const body = JSON.parse(res.payload)
+    res = await makeRequest(fastify, {
+      method: 'GET',
+      url: '/',
+      headers: {
+        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+      }
+    })
+    assert.equal(200, res.statusCode, res.payload)
 
-            assert.equal(1, body.length, res.payload)
-            assert.ok(body[0]._id)
-            assert.deepEqual(body[0].user, {
-              _id: USER_ID,
-              username: USERNAME
-            })
-            assert.deepEqual(body[0].text, TWEET_TEXT)
+    const myTweetBody = JSON.parse(res.payload)
 
-            return makeRequest(fastify, {
-              method: 'GET',
-              url: '/' + USER_ID,
-              headers: {
-                'Authorization': 'Bearer ' + JSON_WEB_TOKEN
-              }
-            })
-              .then(res => {
-                assert.equal(200, res.statusCode, res.payload)
+    assert.equal(1, myTweetBody.length, res.payload)
+    assert.ok(myTweetBody[0]._id)
+    assert.deepEqual(myTweetBody[0].user, {
+      _id: USER_ID,
+      username: USERNAME
+    })
+    assert.deepEqual(myTweetBody[0].text, TWEET_TEXT)
 
-                const body = JSON.parse(res.payload)
+    res = await makeRequest(fastify, {
+      method: 'GET',
+      url: '/' + USER_ID,
+      headers: {
+        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+      }
+    })
+    assert.equal(200, res.statusCode, res.payload)
+    const userTweetBody = JSON.parse(res.payload)
+    assert.deepEqual(userTweetBody, myTweetBody)
 
-                assert.equal(1, body.length, res.payload)
-                assert.ok(body[0]._id)
-                assert.deepEqual(body[0].user, {
-                  _id: USER_ID,
-                  username: USERNAME
-                })
-                assert.deepEqual(body[0].text, TWEET_TEXT)
-
-                getMeNockScope.done()
-              })
-          })
-      })
+    getMeNockScope.done()
   })
 })

@@ -35,10 +35,11 @@ describe('user', () => {
     fastify.close(done)
   })
 
-  it('registration + login', () => {
+  it('registration + login', async () => {
     const USERNAME = 'the-user-1'
     const PASSWORD = 'the-password'
-    return makeRequest(fastify, {
+
+    const regRes = await makeRequest(fastify, {
       method: 'POST',
       url: '/register',
       headers: {
@@ -49,50 +50,42 @@ describe('user', () => {
         password: PASSWORD
       })
     })
-      .then(res => {
-        assert.equal(200, res.statusCode)
+    assert.equal(200, regRes.statusCode)
+
+    const loginRes = await makeRequest(fastify, {
+      method: 'POST',
+      url: '/login',
+      headers: {
+        'Content-type': 'application/json'
+      },
+      payload: JSON.stringify({
+        username: USERNAME,
+        password: PASSWORD
       })
-      .then(() => {
-        return makeRequest(fastify, {
-          method: 'POST',
-          url: '/login',
-          headers: {
-            'Content-type': 'application/json'
-          },
-          payload: JSON.stringify({
-            username: USERNAME,
-            password: PASSWORD
-          })
-        })
-          .then(res => {
-            assert.equal(200, res.statusCode)
-            const { jwt } = JSON.parse(res.payload)
-            assert.ok(jwt)
-            return jwt
-          })
-          .then(jwt => {
-            return makeRequest(fastify, {
-              method: 'GET',
-              url: '/me',
-              headers: {
-                'Content-type': 'application/json',
-                'Authorization': 'Baerer ' + jwt
-              }
-            })
-              .then(res => {
-                assert.equal(200, res.statusCode)
-                const { username, password, _id } = JSON.parse(res.payload)
-                assert.equal(USERNAME, username)
-                assert.equal(undefined, password)
-                assert.ok(_id)
-              })
-          })
-      })
+    })
+    assert.equal(200, loginRes.statusCode)
+    const { jwt } = JSON.parse(loginRes.payload)
+    assert.ok(jwt)
+
+    const getMeRes = await makeRequest(fastify, {
+      method: 'GET',
+      url: '/me',
+      headers: {
+        'Content-type': 'application/json',
+        'Authorization': 'Baerer ' + jwt
+      }
+    })
+    assert.equal(200, getMeRes.statusCode)
+    const { username, password, _id } = JSON.parse(getMeRes.payload)
+    assert.equal(USERNAME, username)
+    assert.equal(undefined, password)
+    assert.ok(_id)
   })
 
-  it('search', () => {
+  it('search', async () => {
     const USERNAMES = [ 'user-foo-1', 'user-foo-2', 'user-foo-3', 'another-user' ]
-    return Promise.all(USERNAMES.map(username => {
+
+    await Promise.all(USERNAMES.map(username => {
       return makeRequest(fastify, {
         method: 'POST',
         url: '/register',
@@ -108,22 +101,19 @@ describe('user', () => {
           assert.equal(200, res.statusCode, res.payload)
         })
     }))
-      .then(() => {
-        return makeRequest(fastify, {
-          method: 'GET',
-          url: '/search?search=-foo-'
-        })
-          .then(res => {
-            assert.equal(200, res.statusCode, res.payload)
 
-            const users = JSON.parse(res.payload)
-            assert.equal(3, users.length)
+    const searchRes = await makeRequest(fastify, {
+      method: 'GET',
+      url: '/search?search=-foo-'
+    })
+    assert.equal(200, searchRes.statusCode, searchRes.payload)
 
-            assert.ok(users.find(u => u.username === USERNAMES[0]))
-            assert.ok(users.find(u => u.username === USERNAMES[1]))
-            assert.ok(users.find(u => u.username === USERNAMES[2]))
-            assert.ok(!users.find(u => u.username === USERNAMES[3]))
-          })
-      })
+    const users = JSON.parse(searchRes.payload)
+    assert.equal(3, users.length)
+
+    assert.ok(users.find(u => u.username === USERNAMES[0]))
+    assert.ok(users.find(u => u.username === USERNAMES[1]))
+    assert.ok(users.find(u => u.username === USERNAMES[2]))
+    assert.ok(!users.find(u => u.username === USERNAMES[3]))
   })
 })
