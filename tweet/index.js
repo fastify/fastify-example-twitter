@@ -3,7 +3,8 @@
 const serie = require('fastseries')()
 
 const {
-  tweet: tweetSchema
+  tweet: tweetSchema,
+  getTweets: getTweetsSchema
 } = require('./schemas')
 const TweetService = require('./TweetService')
 
@@ -68,12 +69,16 @@ function registerUserClient (a, done) {
 
 function registerRoutes (a, done) {
   const { tweetService, userClient } = this
+  const { ObjectId } = this.mongo
 
   this.addHook('preHandler', async function (req, reply, done) {
     try {
       req.user = await userClient.getMe(req)
+      req.user._id = ObjectId.createFromHexString(req.user._id)
     } catch (e) {
-      return done(e)
+      if (!reply.store.config.allowUnlogged) {
+        return done(e)
+      }
     }
     done()
   })
@@ -85,12 +90,13 @@ function registerRoutes (a, done) {
   })
 
   this.get('/', async function (req, reply) {
-    const tweets = await tweetService.fetchTweets(req.user._id)
+    const tweets = await tweetService.fetchTweets([req.user._id])
     return tweets
   })
 
-  this.get('/:userId', async function (req, reply) {
-    const tweets = await tweetService.fetchTweets(req.params.userId)
+  this.get('/:userIds', getTweetsSchema, async function (req, reply) {
+    const userIds = req.params.userIds.split(',').map(id => ObjectId.createFromHexString(id))
+    const tweets = await tweetService.fetchTweets(userIds)
     return tweets
   })
 

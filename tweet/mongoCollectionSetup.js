@@ -10,12 +10,13 @@ module.exports = function (db, tweetCollection, next) {
       'collMod': collectionName,
       validator: {
         user: { $type: 'object' },
+        'user._id': { $type: 'objectId' },
         text: { $type: 'string' }
       }
     }, err => {
       if (err) return next(err)
 
-      tweetCollection.createIndex({ user: 1 }, next)
+      tweetCollection.createIndex({ 'user._id': 1 }, next)
     })
   })
 }

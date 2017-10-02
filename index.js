@@ -29,6 +29,9 @@ function registerTweet (unused, next) {
 function registerFollow (unused, next) {
   this.register(require('./follow'), { prefix: '/api/follow' }, next)
 }
+function registerTimeline (unused, next) {
+  this.register(require('./timeline'), { prefix: '/api/timeline' }, next)
+}
 function registerStatic (unused, next) {
   this.register(require('fastify-static'), {
     root: path.join(__dirname, 'frontend', 'build'),
@@ -44,6 +47,7 @@ module.exports = function (fastify, opts, next) {
       registerUser,
       registerTweet,
       registerFollow,
+      registerTimeline,
       registerStatic
     ],
     opts,
