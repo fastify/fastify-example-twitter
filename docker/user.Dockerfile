@@ -8,9 +8,9 @@ RUN npm install
 
 COPY . /usr/src/app
 
-EXPOSE 3005
+EXPOSE 80
 
 ENV USER_MONGO_URL mongodb://mongo/user
 ENV JWT_SECRET qwertyuiopqwertyuiop
 
-CMD [ "npm", "run", "microservice", "--", "--port", "3005", "user/index.js" ]
+CMD [ "npm", "run", "microservice", "--", "--port", "80", "--log-level", "debug", "--prefix", "/api/user", "user/index.js" ]

@@ -8,9 +8,9 @@ RUN npm install
 
 COPY . /usr/src/app
 
-EXPOSE 3006
+EXPOSE 80
 
 ENV TWEET_MONGO_URL mongodb://mongo/tweet
-ENV USER_MICROSERVICE_BASE_URL http://user:3005
+ENV USER_MICROSERVICE_BASE_URL http://user
 
-CMD [ "npm", "run", "microservice", "--", "--port", "3006", "tweet/index.js" ]
+CMD [ "npm", "run", "microservice", "--", "--port", "80", "--log-level", "debug", "--prefix", "/api/tweet", "tweet/index.js" ]
