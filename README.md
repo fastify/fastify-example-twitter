@@ -47,7 +47,7 @@ The backend is splitted into plugins:
 - *tweet*: tweet storage
 - *follow*: follow storage
 - *timeline*: timeline for homepage
-- **Client*: clients to connect to other services
+- *___Client*: clients to connect to other services
 
 Thankfully to `fastify-env`, each plugin describes the own configuration dependency and it's completely independent!
 
@@ -90,10 +90,41 @@ It is built using `react` + `redux` stack.
 
 No UX or UI study are made (please PR!)
 
-
 ## Split for building microservices
 
-**TODO**: Waiting for docker compose!
+Once your code is written, you'd like to split it into many services for scaling purpose.
+
+`fastify` allows to you to split your code without doing any changes!
+How? When the code is built, `fastify` eases the developer to keep different logics separated thankfully to the encapsulation
+
+First of all, let's build the frontend:
+```sh
+cd frontend
+npm run build
+cd ..
+```
+
+Then,
+```sh
+cd docker
+docker-compose up
+```
+
+### .Dockerfile
+
+These files are very simple Dockerfile. Each Dockerfile inherits directly from nodejs docker image, adding the needed environment variables, exposing the right HTTP port and start the process.
+
+Thankfully to `fastify-cli`, `npm run microservice` is a script described in `package.json` file that allows you to start a **single** plugin as a server. Passing the right parameters, each Dockerfile starts the right plugin with the right prefix.
+
+### Nginx
+
+The nginx configuration describes how the external incoming request should be proxied to the right service.
+
+*NB:* to describe the upstream, nginx needs to know where the microservices are. To do this, nginx uses hostnames that are automatically resolved by docker compose. The standard ports are used in order to reduce the complexity.
+
+### Databases
+
+MongoDB and Redis start using the official docker images
 
 ## TODO
 
@@ -102,7 +133,7 @@ No UX or UI study are made (please PR!)
 - [x] Follow microservices for following and unfollowing other users
 - [ ] Better test
 - [ ] Better README.md
-- [ ] Use Docker compose
+- [x] Use Docker compose
 - [ ] Use `fastify-react` for react serve side rendering
 - [x] Better UI
 - [ ] Even better UI

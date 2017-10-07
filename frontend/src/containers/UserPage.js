@@ -1,5 +1,6 @@
 import React from 'react'
 import { connect } from 'react-redux'
+import { Redirect } from 'react-router-dom'
 
 import { getUserTweets, getUser, getFollowers, getFollowings } from '../action'
 
@@ -22,6 +23,8 @@ class UserPage extends React.Component {
   }
 
   render () {
+    if (!this.props.isLogged) return <Redirect to='/login' />
+
     const userProfile = this.props.profile
       ? <UserProfile profile={this.props.profile}
         followersCount={this.props.followersCount}
@@ -41,6 +44,7 @@ UserPage.propTypes = {}
 const mapStateToProps = (state, props) => {
   const userId = props.match.params.userId
   return {
+    isLogged: !!state.user.jwt,
     tweets: state.userTweet[userId] || [],
     userId: userId,
     profile: state.users[userId],

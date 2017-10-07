@@ -10,10 +10,13 @@ module.exports = fp(function (fastify, opts, next) {
 
   fastify.decorate('userClient', {
     getMe: function (req) {
+      if (!req.headers.authorization) {
+        return Promise.reject(new Error('No authorization header found'))
+      }
       return got(`${opts.USER_MICROSERVICE_BASE_URL}/api/user/me`, {
         method: 'GET',
         headers: {
-          authorization: req.req.headers.authorization
+          authorization: req.headers.authorization
         },
         json: true,
         followRedirect: false
