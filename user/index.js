@@ -1,6 +1,6 @@
 'use strict'
 
-const serie = require('fastseries')()
+const fp = require('fastify-plugin')
 
 const {
   login: loginSchema,
@@ -10,33 +10,20 @@ const {
 } = require('./schemas')
 const UserService = require('./UserService')
 
+/*
+ * This is the user plugin
+ * A plugin is a self contained component, so we need to made some operations:
+ * - check the configuration (fastify-env)
+ * - connect to mongodb (fastify-mongodb)
+ * - configure JWT library (fastify-jwt)
+ * - build business login objects
+ * - define the HTTP API
+ */
 module.exports = function (fastify, opts, next) {
-  serie(
-    // fastify will be the 'this' in the following functions
-    fastify,
-    [
-      // check if the opts + env is ok
-      registerEnv,
-      // add fastify.mongo using `fastify-mongodb`
-      registerMongo,
-      // decorate fastify instance with 'userCollection'
-      decorateWithUserCollection,
-      // decorate fastify with jwt utils using `fastify-jwt`
-      registerJwt,
-      // assert validation schema and indexes
-      registerMongoSetup,
-      // add business logic instance to fastify
-      decorateWithUserService,
-      // finally registering the routes
-      registerRoutes
-    ],
-    opts,
-    next
-  )
-}
-
-function registerEnv (data, done) {
-  const envOpts = {
+  // This is a plugin registration inside a plugin
+  // fastify-env checks and coerces `opts` and save the result in `fastify.config`
+  // See https://github.com/fastify/fastify-env
+  fastify.register(require('fastify-env'), {
     schema: {
       type: 'object',
       required: [ 'USER_MONGO_URL', 'JWT_SECRET' ],
@@ -45,71 +32,93 @@ function registerEnv (data, done) {
         JWT_SECRET: { type: 'string', default: 'changeme!' }
       }
     },
-    data: data
-  }
-  this.register(require('fastify-env'), envOpts, done)
+    data: opts
+  })
+
+  // This registration is made in order to wait the previous one
+  // `avvio` (https://github.com/mcollina/avvio), the startup manager of `fastify`,
+  // registers this plugin only when the previous plugin has been registered
+  fastify.register(function (fastify, opts, done) {
+    // We need a connection database:
+    // `fastify-mongodb` makes this connection and store the database instance into `fastify.mongo.db`
+    // See https://github.com/fastify/fastify-mongodb
+    fastify.register(require('fastify-mongodb'), {
+      url: fastify.config.USER_MONGO_URL
+    })
+
+    // Create our business login object and store it in fastify instance
+    // Because we need `userCollection` *after* (and not only in) this plugin,
+    // we need to use `fastify-plugin` to ask to `fastify` don't encapsulate `decorateWithUserCollection`
+    // but to share the same fastify instance between inside and outside.
+    // In this way all decorations are available outside too.
+    fastify.register(fp(function decorateWithUserCollection (fastify, opts, done) {
+      fastify.decorate('userCollection', fastify.mongo.db.collection('users'))
+      done()
+    }))
+
+    // JWT is used to identify the user
+    // See https://github.com/fastify/fastify-jwt
+    fastify.register(require('fastify-jwt'), {
+      secret: fastify.config.JWT_SECRET,
+      algorithms: ['RS256']
+    })
+
+    // Each plugin is standalone, so the database shoud be set up
+    // Mongodb has no schema but we need to specify some indexes and validators
+    fastify.register(function (fastify, opts, done) {
+      require('./mongoCollectionSetup')(fastify.mongo.db, fastify.userCollection, done)
+    })
+
+    // Add another business logic object to `fastify` instance
+    // Again, `fastify-plugin` is used in order to access to `fastify.userService` from outside
+    fastify.register(fp(function (fastify, opts, done) {
+      const userService = new UserService(fastify.userCollection, fastify.jwt)
+      fastify.decorate('userService', userService)
+      done()
+    }))
+
+    // Finally we're registering out routes
+    fastify.register(registerRoutes)
+
+    done()
+  })
+
+  next()
 }
 
-function registerMongo (a, done) {
-  const mongoDbOpts = {
-    url: this.config.USER_MONGO_URL
-  }
-  this.register(require('fastify-mongodb'), mongoDbOpts, done)
-}
+function registerRoutes (fastify, opts, done) {
+  // extract the useful objects
+  const { userService } = fastify
+  const { ObjectId } = fastify.mongo
 
-function decorateWithUserCollection (a, done) {
-  this.decorate('userCollection', this.mongo.db.collection('users'))
-  done()
-}
-
-function registerJwt (a, done) {
-  const jwtOpts = {
-    secret: this.config.JWT_SECRET,
-    algorithms: ['RS256']
-  }
-  this.register(require('fastify-jwt'), jwtOpts, done)
-}
-
-function registerMongoSetup (a, done) {
-  require('./mongoCollectionSetup')(this.mongo.db, this.userCollection, done)
-}
-
-function decorateWithUserService (a, done) {
-  const userService = new UserService(this.userCollection, this.jwt)
-  this.decorate('userService', userService)
-  done()
-}
-
-function registerRoutes (a, done) {
-  const { userService } = this
-  const { ObjectId } = this.mongo
-
-  this.post('/login', loginSchema, async function (req, reply) {
+  // registering login defining the input schema and the output schema
+  // See ./schemas.js
+  fastify.post('/login', loginSchema, async function (req, reply) {
     const { username, password } = req.body
     const jwt = await userService.login(username, password)
 
     return {jwt}
   })
 
-  this.post('/register', registrationSchema, async function (req, reply) {
+  fastify.post('/register', registrationSchema, async function (req, reply) {
     const { username, password } = req.body
     await userService.register(username, password)
     return {}
   })
 
-  this.get('/me', async function (req, reply) {
+  fastify.get('/me', async function (req, reply) {
     const jwt = (req.req.headers.authorization || '').substr(7)
     const decoded = userService.decode(jwt)
     const user = await userService.getProfile(ObjectId.createFromHexString(decoded._id))
     return user
   })
 
-  this.get('/:userId', getProfileSchema, async function (req, reply) {
+  fastify.get('/:userId', getProfileSchema, async function (req, reply) {
     const user = await userService.getProfile(ObjectId.createFromHexString(req.params.userId))
     return user
   })
 
-  this.get('/search', searchSchema, async function (req, reply) {
+  fastify.get('/search', searchSchema, async function (req, reply) {
     const { search } = req.query
     const users = await userService.search(search)
     return users
