@@ -1,6 +1,6 @@
 'use strict'
 
-const serie = require('fastseries')()
+const fp = require('fastify-plugin')
 
 const {
   timeline: timelineSchema
@@ -8,23 +8,8 @@ const {
 const TimelineService = require('./TimelineService')
 
 module.exports = function (fastify, opts, next) {
-  serie(
-    fastify,
-    [
-      registerEnv,
-      registerUserClient,
-      registerFollowClient,
-      registerTweetClient,
-      decorateWithTimelineService,
-      registerRoutes
-    ],
-    opts,
-    next
-  )
-}
-
-function registerEnv (data, done) {
-  const envOpts = {
+  // See user/index.js for some little explainations
+  fastify.register(require('fastify-env'), {
     schema: {
       type: 'object',
       required: [
@@ -38,33 +23,32 @@ function registerEnv (data, done) {
         TWEET_MICROSERVICE_BASE_URL: { type: 'string', default: 'http://localhost:3001' }
       }
     },
-    data: data
-  }
-  this.register(require('fastify-env'), envOpts, done)
+    data: opts
+  })
+
+  fastify.register(function (fastify, opts, done) {
+    fastify.register(require('../userClient'), fastify.config, done)
+    fastify.register(require('../followClient'), fastify.config, done)
+    fastify.register(require('../tweetClient'), fastify.config, done)
+
+    fastify.register(fp(function decorateWithTimelineService (fastify, opts, done) {
+      const timelineService = new TimelineService(fastify.followClient, fastify.tweetClient)
+      fastify.decorate('timelineService', timelineService)
+      done()
+    }))
+
+    fastify.register(registerRoutes)
+
+    done()
+  })
+
+  next()
 }
 
-function registerUserClient (a, done) {
-  this.register(require('../userClient'), this.config, done)
-}
+function registerRoutes (fastify, opts, done) {
+  const { timelineService, userClient } = fastify
 
-function registerFollowClient (a, done) {
-  this.register(require('../followClient'), this.config, done)
-}
-
-function registerTweetClient (a, done) {
-  this.register(require('../tweetClient'), this.config, done)
-}
-
-function decorateWithTimelineService (a, done) {
-  const timelineService = new TimelineService(this.followClient, this.tweetClient)
-  this.decorate('timelineService', timelineService)
-  done()
-}
-
-function registerRoutes (a, done) {
-  const { timelineService, userClient } = this
-
-  this.addHook('preHandler', async function (req, reply, done) {
+  fastify.addHook('preHandler', async function (req, reply, done) {
     try {
       req.user = await userClient.getMe(req)
     } catch (e) {
@@ -75,7 +59,7 @@ function registerRoutes (a, done) {
     done()
   })
 
-  this.get('/', timelineSchema, async function (req, reply) {
+  fastify.get('/', timelineSchema, async function (req, reply) {
     const tweets = await timelineService.getTimeline(req.user._id)
     return tweets
   })
