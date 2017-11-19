@@ -14,14 +14,14 @@
   "license": "ISC",
   "dependencies": {
     "boom": "^5.2.0",
-    "fastify": "^0.30.2",
+    "fastify": "^0.35.0",
     "fastify-env": "^0.2.0",
-    "fastify-jwt": "^0.1.0",
-    "fastify-mongodb": "^0.1.0",
+    "fastify-jwt": "^0.1.1",
+    "fastify-mongodb": "^0.2.0",
     "fastify-plugin": "^0.1.1",
-    "fastify-redis": "^0.1.0",
-    "fastify-static": "^0.3.0",
-    "fastify-swagger": "fastify/fastify-swagger#first-implementation",
+    "fastify-redis": "^0.1.1",
+    "fastify-static": "^0.4.1",
+    "fastify-swagger": "^0.1.1",
     "fastseries": "^1.7.2",
     "got": "^7.1.0"
   },
@@ -30,7 +30,6 @@
     "mongodb": "^2.2.31",
     "nock": "^9.0.14",
     "pre-commit": "^1.2.2",
-    "shot": "^3.4.2",
     "snazzy": "^7.0.0",
     "standard": "^10.0.3"
   }

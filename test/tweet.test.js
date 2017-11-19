@@ -25,7 +25,7 @@ describe('tweet', () => {
       })
   })
   before('create fastify instance', (done) => {
-    fastify = Fastify({ level: 'silent' })
+    fastify = Fastify({ logger: { level: 'silent' } })
     fastify.register(fp(tweetPlugin), configuration)
     fastify.ready(done)
   })
@@ -63,7 +63,7 @@ describe('tweet', () => {
         text: TWEET_TEXT
       })
     })
-    assert.equal(204, res.statusCode, res.payload)
+    assert.equal(res.statusCode, 204, res.payload)
 
     res = await makeRequest(fastify, {
       method: 'GET',
@@ -72,11 +72,11 @@ describe('tweet', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    assert.equal(res.statusCode, 200, res.payload)
 
     const myTweetBody = JSON.parse(res.payload)
 
-    assert.equal(1, myTweetBody.length, res.payload)
+    assert.equal(myTweetBody.length, 1, res.payload)
     assert.ok(myTweetBody[0]._id)
     assert.deepEqual(myTweetBody[0].user, {
       _id: USER_ID,
@@ -91,7 +91,7 @@ describe('tweet', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    assert.equal(res.statusCode, 200, res.payload)
     const userTweetBody = JSON.parse(res.payload)
     assert.deepEqual(userTweetBody, myTweetBody)
 

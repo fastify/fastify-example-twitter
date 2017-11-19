@@ -56,16 +56,15 @@ function registerRoutes (fastify, opts, done) {
   const { tweetService, userClient } = fastify
   const { ObjectId } = fastify.mongo
 
-  fastify.addHook('preHandler', async function (req, reply, done) {
+  fastify.addHook('preHandler', async function (req, reply) {
     try {
       req.user = await userClient.getMe(req)
       req.user._id = ObjectId.createFromHexString(req.user._id)
     } catch (e) {
       if (!reply.store.config.allowUnlogged) {
-        return done(e)
+        throw e
       }
     }
-    done()
   })
 
   fastify.post('/', tweetSchema, async function (req, reply) {
