@@ -8,7 +8,7 @@ const {
 } = require('./schemas')
 const TweetService = require('./TweetService')
 
-module.exports = function (fastify, opts, next) {
+module.exports = async function (fastify, opts) {
   // See user/index.js for some little explainations
   fastify.register(require('fastify-env'), {
     schema: {
@@ -22,37 +22,31 @@ module.exports = function (fastify, opts, next) {
     data: opts
   })
 
-  fastify.register(function (fastify, opts, done) {
+  fastify.register(async function (fastify, opts) {
     fastify.register(require('fastify-mongodb'), {
       url: fastify.config.TWEET_MONGO_URL
     })
 
-    fastify.register(fp(function decorateWithTweetCollection (fastify, opts, done) {
+    fastify.register(fp(async function decorateWithTweetCollection (fastify, opts) {
       fastify.decorate('tweetCollection', fastify.mongo.db.collection('users'))
-      done()
     }))
 
-    fastify.register(function (fastify, opts, done) {
-      require('./mongoCollectionSetup')(fastify.mongo.db, fastify.tweetCollection, done)
+    fastify.register(async function (fastify, opts) {
+      require('./mongoCollectionSetup')(fastify.mongo.db, fastify.tweetCollection)
     })
 
-    fastify.register(fp(function decorateWithTweetService (fastify, opts, done) {
+    fastify.register(fp(async function decorateWithTweetService (fastify, opts) {
       const tweetService = new TweetService(fastify.tweetCollection)
       fastify.decorate('tweetService', tweetService)
-      done()
     }))
 
-    fastify.register(require('../userClient'), fastify.config, done)
+    fastify.register(require('../userClient'), fastify.config)
 
     fastify.register(registerRoutes)
-
-    done()
   })
-
-  next()
 }
 
-function registerRoutes (fastify, opts, done) {
+async function registerRoutes (fastify, opts) {
   const { tweetService, userClient } = fastify
   const { ObjectId } = fastify.mongo
 
@@ -61,7 +55,7 @@ function registerRoutes (fastify, opts, done) {
       req.user = await userClient.getMe(req)
       req.user._id = ObjectId.createFromHexString(req.user._id)
     } catch (e) {
-      if (!reply.store.config.allowUnlogged) {
+      if (!reply.context.config.allowUnlogged) {
         throw e
       }
     }
@@ -83,6 +77,4 @@ function registerRoutes (fastify, opts, done) {
     const tweets = await tweetService.fetchTweets(userIds)
     return tweets
   })
-
-  done()
 }

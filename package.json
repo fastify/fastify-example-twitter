@@ -8,7 +8,7 @@
     "unit": "mocha test/*.test.js",
     "test": "npm run lint && npm run unit",
     "microservice": "fastify",
-    "start": "node index.js"
+    "start": "fastify index.js"
   },
   "author": "",
   "license": "ISC",

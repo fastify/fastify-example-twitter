@@ -7,7 +7,7 @@ const {
 } = require('./schemas')
 const TimelineService = require('./TimelineService')
 
-module.exports = function (fastify, opts, next) {
+module.exports = async function (fastify, opts) {
   // See user/index.js for some little explainations
   fastify.register(require('fastify-env'), {
     schema: {
@@ -26,43 +26,35 @@ module.exports = function (fastify, opts, next) {
     data: opts
   })
 
-  fastify.register(function (fastify, opts, done) {
-    fastify.register(require('../userClient'), fastify.config, done)
-    fastify.register(require('../followClient'), fastify.config, done)
-    fastify.register(require('../tweetClient'), fastify.config, done)
+  fastify.register(async function (fastify, opts) {
+    fastify.register(require('../userClient'), fastify.config)
+      .register(require('../followClient'), fastify.config)
+      .register(require('../tweetClient'), fastify.config)
 
-    fastify.register(fp(function decorateWithTimelineService (fastify, opts, done) {
+    fastify.register(fp(async function decorateWithTimelineService (fastify, opts) {
       const timelineService = new TimelineService(fastify.followClient, fastify.tweetClient)
       fastify.decorate('timelineService', timelineService)
-      done()
     }))
 
     fastify.register(registerRoutes)
-
-    done()
   })
-
-  next()
 }
 
-function registerRoutes (fastify, opts, done) {
+async function registerRoutes (fastify, opts) {
   const { timelineService, userClient } = fastify
 
-  fastify.addHook('preHandler', async function (req, reply, done) {
+  fastify.addHook('preHandler', async function (req, reply) {
     try {
       req.user = await userClient.getMe(req)
     } catch (e) {
-      if (!reply.store.config.allowUnlogged) {
-        return done(e)
+      if (!reply.context.config.allowUnlogged) {
+        throw e
       }
     }
-    done()
   })
 
   fastify.get('/', timelineSchema, async function (req, reply) {
     const tweets = await timelineService.getTimeline(req.user._id)
     return tweets
   })
-
-  done()
 }
