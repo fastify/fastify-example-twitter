@@ -11,16 +11,20 @@ The aim of this project is to show how `fastify` can be used.
 # build frontend
 cd frontend && npm build && cd ..
 # start backend
-npm start
+npm start -- --log-level trace --port 3001
 ```
+
+Open your browser at [http://localhost:3001](http://localhost:3001)
 
 ### Development
 ```bash
 # start frontend server
 cd frontend && npm start
 # start backend
-npm start # in another terminal
+npm start -- --log-level trace --port 3001 # in another terminal
 ```
+
+Open your browser at [http://localhost:3000](http://localhost:3000)
 
 ## Backend
 
