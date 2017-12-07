@@ -1,22 +1,18 @@
 'use strict'
 
-module.exports = function (db, tweetCollection, next) {
+module.exports = async function (db, tweetCollection) {
   const {name: collectionName} = tweetCollection.s
 
-  db.createCollection(collectionName, err => {
-    if (err) return next(err)
+  await db.createCollection(collectionName)
 
-    db.command({
-      'collMod': collectionName,
-      validator: {
-        user: { $type: 'object' },
-        'user._id': { $type: 'objectId' },
-        text: { $type: 'string' }
-      }
-    }, err => {
-      if (err) return next(err)
-
-      tweetCollection.createIndex({ 'user._id': 1 }, next)
-    })
+  await db.command({
+    'collMod': collectionName,
+    validator: {
+      user: { $type: 'object' },
+      'user._id': { $type: 'objectId' },
+      text: { $type: 'string' }
+    }
   })
+
+  await tweetCollection.createIndex({ 'user._id': 1 })
 }
