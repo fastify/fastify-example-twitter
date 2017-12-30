@@ -5,7 +5,7 @@ const fp = require('fastify-plugin')
 
 const got = require('got')
 
-module.exports = fp(function (fastify, opts, next) {
+module.exports = fp(async function (fastify, opts) {
   assert.ok(opts.FOLLOW_MICROSERVICE_BASE_URL, '"TWEET_MICROSERVICE_BASE_URL" must be a string')
 
   fastify.decorate('tweetClient', {
@@ -18,6 +18,4 @@ module.exports = fp(function (fastify, opts, next) {
         .then(r => r.body)
     }
   })
-
-  next()
 })

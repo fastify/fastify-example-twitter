@@ -19,7 +19,7 @@ const UserService = require('./UserService')
  * - build business login objects
  * - define the HTTP API
  */
-module.exports = function (fastify, opts, next) {
+module.exports = async function (fastify, opts) {
   // This is a plugin registration inside a plugin
   // fastify-env checks and coerces `opts` and save the result in `fastify.config`
   // See https://github.com/fastify/fastify-env
@@ -38,7 +38,7 @@ module.exports = function (fastify, opts, next) {
   // This registration is made in order to wait the previous one
   // `avvio` (https://github.com/mcollina/avvio), the startup manager of `fastify`,
   // registers this plugin only when the previous plugin has been registered
-  fastify.register(function (fastify, opts, done) {
+  fastify.register(async function (fastify, opts) {
     // We need a connection database:
     // `fastify-mongodb` makes this connection and store the database instance into `fastify.mongo.db`
     // See https://github.com/fastify/fastify-mongodb
@@ -51,9 +51,8 @@ module.exports = function (fastify, opts, next) {
     // we need to use `fastify-plugin` to ask to `fastify` don't encapsulate `decorateWithUserCollection`
     // but to share the same fastify instance between inside and outside.
     // In this way all decorations are available outside too.
-    fastify.register(fp(function decorateWithUserCollection (fastify, opts, done) {
+    fastify.register(fp(async function decorateWithUserCollection (fastify, opts) {
       fastify.decorate('userCollection', fastify.mongo.db.collection('users'))
-      done()
     }))
 
     // JWT is used to identify the user
@@ -65,28 +64,23 @@ module.exports = function (fastify, opts, next) {
 
     // Each plugin is standalone, so the database shoud be set up
     // Mongodb has no schema but we need to specify some indexes and validators
-    fastify.register(function (fastify, opts, done) {
-      require('./mongoCollectionSetup')(fastify.mongo.db, fastify.userCollection, done)
+    fastify.register(async function (fastify, opts) {
+      require('./mongoCollectionSetup')(fastify.mongo.db, fastify.userCollection)
     })
 
     // Add another business logic object to `fastify` instance
     // Again, `fastify-plugin` is used in order to access to `fastify.userService` from outside
-    fastify.register(fp(function (fastify, opts, done) {
+    fastify.register(fp(async function (fastify, opts) {
       const userService = new UserService(fastify.userCollection, fastify.jwt)
       fastify.decorate('userService', userService)
-      done()
     }))
 
     // Finally we're registering out routes
     fastify.register(registerRoutes)
-
-    done()
   })
-
-  next()
 }
 
-function registerRoutes (fastify, opts, done) {
+async function registerRoutes (fastify, opts) {
   // extract the useful objects
   const { userService } = fastify
   const { ObjectId } = fastify.mongo
@@ -123,6 +117,4 @@ function registerRoutes (fastify, opts, done) {
     const users = await userService.search(search)
     return users
   })
-
-  done()
 }

@@ -5,7 +5,7 @@ const fp = require('fastify-plugin')
 
 const got = require('got')
 
-module.exports = fp(function (fastify, opts, next) {
+module.exports = fp(async function (fastify, opts) {
   assert.ok(opts.USER_MICROSERVICE_BASE_URL, '"USER_MICROSERVICE_BASE_URL" must be a string')
 
   fastify.decorate('userClient', {
@@ -24,6 +24,4 @@ module.exports = fp(function (fastify, opts, next) {
         .then(r => r.body)
     }
   })
-
-  next()
 })

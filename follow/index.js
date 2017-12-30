@@ -9,7 +9,7 @@ const {
 } = require('./schemas')
 const FollowService = require('./FollowService')
 
-module.exports = function (fastify, opts, next) {
+module.exports = async function (fastify, opts) {
   // See user/index.js for some little explainations
   fastify.register(require('fastify-env'), {
     schema: {
@@ -40,22 +40,19 @@ module.exports = function (fastify, opts, next) {
 
     done()
   })
-
-  next()
 }
 
-function registerRoutes (fastify, opts, done) {
+async function registerRoutes (fastify, opts) {
   const { followService, userClient } = fastify
 
-  fastify.addHook('preHandler', async function (req, reply, done) {
+  fastify.addHook('preHandler', async function (req, reply) {
     try {
       req.user = await userClient.getMe(req)
     } catch (e) {
-      if (!reply.store.config.allowUnlogged) {
-        return done(e)
+      if (!reply.context.config.allowUnlogged) {
+        throw e
       }
     }
-    done()
   })
 
   fastify.post('/follow', followSchema, async function (req, reply) {
@@ -85,6 +82,4 @@ function registerRoutes (fastify, opts, done) {
   fastify.get('/followers/:userId', followersSchema, function (req, reply) {
     return followService.getFollowers(req.params.userId)
   })
-
-  done()
 }
