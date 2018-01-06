@@ -9,7 +9,7 @@ The aim of this project is to show how `fastify` can be used.
 ### Pseudo-production
 ```bash
 # build frontend
-cd frontend && npm build && cd ..
+cd frontend && npm run build && cd ..
 # start backend
 npm start -- --log-level trace --port 3001
 ```
