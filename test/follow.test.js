@@ -10,11 +10,18 @@ const client = redis.createClient()
 const Fastify = require('fastify')
 const fp = require('fastify-plugin')
 
-const makeRequest = (fastify, options) => new Promise((resolve) => fastify.inject(options, resolve))
-
-const configuration = {
-  FOLLOW_REDIS_URL: '127.0.0.1'
+let getMeArguments = []
+let getMeReturn = []
+async function fakeUserClient (fastify) {
+  fastify.decorate('userClient', {
+    getMe: function (req) {
+      getMeArguments.push(req)
+      return getMeReturn.shift()
+    }
+  })
 }
+
+const REDIS_URL = 'redis://localhost:6379'
 
 let fastify
 describe('follow', () => {
@@ -23,9 +30,11 @@ describe('follow', () => {
   })
 
   before('create fastify instance', (done) => {
-    fastify = Fastify({ level: 'silent' })
-    fastify.register(fp(followPlugin), configuration)
-    fastify.ready(done)
+    fastify = Fastify({ logger: { level: 'silent' } })
+    fastify.register(require('fastify-redis'), { url: REDIS_URL })
+      .register(fp(fakeUserClient))
+      .register(followPlugin)
+      .ready(done)
   })
   before(() => nock.disableNetConnect())
   after(() => nock.enableNetConnect())
@@ -42,18 +51,18 @@ describe('follow', () => {
 
     const OTHER_USER_ID = '1111'
 
-    const getMeNockScope = nock('http://localhost:3001')
-      .replyContentLength()
-      .get('/api/user/me')
-      .times(6)
-      .reply(200, {
-        _id: USER_ID,
-        username: USERNAME
-      })
+    getMeReturn = [
+      { _id: USER_ID, username: USERNAME },
+      { _id: USER_ID, username: USERNAME },
+      { _id: USER_ID, username: USERNAME },
+      { _id: USER_ID, username: USERNAME },
+      { _id: USER_ID, username: USERNAME },
+      { _id: USER_ID, username: USERNAME }
+    ]
 
     let res, body
 
-    res = await makeRequest(fastify, {
+    res = await fastify.inject({
       method: 'POST',
       url: '/follow',
       headers: {
@@ -66,7 +75,7 @@ describe('follow', () => {
     })
     assert.equal(204, res.statusCode, res.payload)
 
-    res = await makeRequest(fastify, {
+    res = await fastify.inject({
       method: 'GET',
       url: '/following/me',
       headers: {
@@ -77,7 +86,7 @@ describe('follow', () => {
     body = JSON.parse(res.payload)
     assert.deepStrictEqual(body, [OTHER_USER_ID])
 
-    res = await makeRequest(fastify, {
+    res = await fastify.inject({
       method: 'GET',
       url: `/followers/${OTHER_USER_ID}`,
       headers: {
@@ -88,7 +97,7 @@ describe('follow', () => {
     body = JSON.parse(res.payload)
     assert.deepStrictEqual(body, [USER_ID])
 
-    res = await makeRequest(fastify, {
+    res = await fastify.inject({
       method: 'POST',
       url: '/unfollow',
       headers: {
@@ -101,7 +110,7 @@ describe('follow', () => {
     })
     assert.equal(204, res.statusCode, res.payload)
 
-    res = await makeRequest(fastify, {
+    res = await fastify.inject({
       method: 'GET',
       url: '/following/me',
       headers: {
@@ -112,7 +121,7 @@ describe('follow', () => {
     body = JSON.parse(res.payload)
     assert.deepStrictEqual(body, [])
 
-    res = await makeRequest(fastify, {
+    res = await fastify.inject({
       method: 'GET',
       url: `/followers/${OTHER_USER_ID}`,
       headers: {
@@ -123,6 +132,6 @@ describe('follow', () => {
     body = JSON.parse(res.payload)
     assert.deepStrictEqual(body, [])
 
-    getMeNockScope.done()
+    assert.deepStrictEqual(getMeArguments.length, 6)
   })
 })

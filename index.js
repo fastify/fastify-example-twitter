@@ -1,6 +1,7 @@
 'use strict'
 
 const path = require('path')
+const fp = require('fastify-plugin')
 
 const swaggerOption = {
   swagger: {
@@ -16,13 +17,39 @@ const swaggerOption = {
   }
 }
 
+const schema = {
+  type: 'object',
+  required: [ 'MONGODB_URL', 'REDIS_URL', 'JWT_SECRET' ],
+  properties: {
+    MONGODB_URL: { type: 'string' },
+    REDIS_URL: { type: 'string' },
+    JWT_SECRET: { type: 'string' }
+  }
+}
+
+async function connectToDatabases (fastify) {
+  fastify
+    // `fastify-mongodb` makes this connection and store the database instance into `fastify.mongo.db`
+    // See https://github.com/fastify/fastify-mongodb
+    .register(require('fastify-mongodb'), { url: fastify.config.MONGODB_URL })
+    .register(require('fastify-redis'), { url: fastify.config.REDIS_URL })
+}
+
 module.exports = async function (fastify, opts) {
   fastify
+    .register(require('fastify-swagger'), swaggerOption)
+    // fastify-env checks and coerces the environment variables and save the result in `fastify.config`
+    // See https://github.com/fastify/fastify-env
+    .register(require('fastify-env'), { schema })
+    .register(fp(connectToDatabases))
+    .register(require('./user'))
+    .register(require('./userClient'))
+    /*
     .register(require('./user'), { prefix: '/api/user' })
     .register(require('./tweet'), { prefix: '/api/tweet' })
     .register(require('./follow'), { prefix: '/api/follow' })
     .register(require('./timeline'), { prefix: '/api/timeline' })
-    .register(require('fastify-swagger'), swaggerOption)
+    */
     .register(require('fastify-static'), {
       root: path.join(__dirname, 'frontend', 'build'),
       prefix: '/'

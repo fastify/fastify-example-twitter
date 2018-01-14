@@ -1,6 +1,6 @@
 'use strict'
 
-const fp = require('fastify-plugin')
+const TWEET_COLLECTION_NAME = 'tweet'
 
 const {
   tweet: tweetSchema,
@@ -9,72 +9,55 @@ const {
 const TweetService = require('./TweetService')
 
 module.exports = async function (fastify, opts) {
-  // See user/index.js for some little explainations
-  fastify.register(require('fastify-env'), {
-    schema: {
-      type: 'object',
-      required: [ 'TWEET_MONGO_URL', 'USER_MICROSERVICE_BASE_URL' ],
-      properties: {
-        TWEET_MONGO_URL: { type: 'string', default: 'mongodb://localhost/tweet' },
-        USER_MICROSERVICE_BASE_URL: { type: 'string', default: 'http://localhost:3001' }
-      }
-    },
-    data: opts
-  })
+  if (!fastify.mongo) throw new Error('`fastify.mongo` is undefined')
+  if (!fastify.userClient) throw new Error('`fastify.userClient` is undefined')
 
-  fastify.register(async function (fastify, opts) {
-    fastify.register(require('fastify-mongodb'), {
-      url: fastify.config.TWEET_MONGO_URL
-    })
-
-    fastify.register(fp(async function decorateWithTweetCollection (fastify, opts) {
-      fastify.decorate('tweetCollection', fastify.mongo.db.collection('users'))
-    }))
-
-    fastify.register(async function (fastify, opts) {
-      require('./mongoCollectionSetup')(fastify.mongo.db, fastify.tweetCollection)
-    })
-
-    fastify.register(fp(async function decorateWithTweetService (fastify, opts) {
-      const tweetService = new TweetService(fastify.tweetCollection)
-      fastify.decorate('tweetService', tweetService)
-    }))
-
-    fastify.register(require('../userClient'), fastify.config)
-
-    fastify.register(registerRoutes)
-  })
-}
-
-async function registerRoutes (fastify, opts) {
-  const { tweetService, userClient } = fastify
-  const { ObjectId } = fastify.mongo
-
-  fastify.addHook('preHandler', async function (req, reply) {
-    try {
-      req.user = await userClient.getMe(req)
-      req.user._id = ObjectId.createFromHexString(req.user._id)
-    } catch (e) {
-      if (!reply.context.config.allowUnlogged) {
-        throw e
-      }
+  const db = fastify.mongo.db
+  const tweetCollection = await db.createCollection(TWEET_COLLECTION_NAME)
+  await db.command({
+    'collMod': TWEET_COLLECTION_NAME,
+    validator: {
+      user: { $type: 'object' },
+      'user._id': { $type: 'objectId' },
+      text: { $type: 'string' }
     }
   })
+  await tweetCollection.createIndex({ 'user._id': 1 })
 
-  fastify.post('/', tweetSchema, async function (req, reply) {
-    const { text } = req.body
-    await tweetService.addTweet(req.user, text)
-    reply.code(204)
-  })
+  const tweetService = new TweetService(tweetCollection)
+  fastify.decorate('tweetService', tweetService)
+  fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
 
-  fastify.get('/', async function (req, reply) {
-    const tweets = await tweetService.fetchTweets([req.user._id])
-    return tweets
-  })
+  fastify.addHook('preHandler', preHandler)
+  fastify.post('/', tweetSchema, addTwitterHandler)
+  fastify.get('/', getTwitterHandler)
+  fastify.get('/:userIds', getTweetsSchema, getUserTweetsHandler)
+}
 
-  fastify.get('/:userIds', getTweetsSchema, async function (req, reply) {
-    const userIds = req.params.userIds.split(',').map(id => ObjectId.createFromHexString(id))
-    const tweets = await tweetService.fetchTweets(userIds)
-    return tweets
-  })
+async function preHandler (req, reply) {
+  try {
+    req.user = await this.userClient.getMe(req)
+    req.user._id = this.transformStringIntoObjectId(req.user._id)
+  } catch (e) {
+    if (!reply.context.config.allowUnlogged) {
+      throw e
+    }
+  }
+}
+
+async function addTwitterHandler (req, reply) {
+  const { text } = req.body
+  await this.tweetService.addTweet(req.user, text)
+  reply.code(204)
+}
+
+async function getTwitterHandler (req, reply) {
+  const tweets = await this.tweetService.fetchTweets([req.user._id])
+  return tweets
+}
+
+async function getUserTweetsHandler (req, reply) {
+  const userIds = req.params.userIds.split(',').map(id => this.transformStringIntoObjectId(id))
+  const tweets = await this.tweetService.fetchTweets(userIds)
+  return tweets
 }

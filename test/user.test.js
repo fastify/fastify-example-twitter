@@ -6,28 +6,26 @@ const userPlugin = require('../user')
 const assert = require('assert')
 const MongoClient = require('mongodb').MongoClient
 const Fastify = require('fastify')
-const fp = require('fastify-plugin')
 
-const makeRequest = (fastify, options) => new Promise((resolve) => fastify.inject(options, resolve))
-
-const configuration = {
-  USER_MONGO_URL: 'mongodb://localhost/user',
-  JWT_SECRET: 'the secret'
-}
+const MONGODB_URL = 'mongodb://localhost:27017/test'
+const configuration = { JWT_SECRET: 'the secret' }
 
 let fastify
 describe('user', () => {
   before('drop mongo', () => {
-    return MongoClient.connect(configuration.USER_MONGO_URL)
+    return MongoClient.connect(MONGODB_URL)
       .then(mongoClient => {
         mongoClient.unref()
         return mongoClient.dropDatabase()
       })
   })
+
   before('create fastify instance', (done) => {
-    fastify = Fastify({ level: 'silent' })
-    fastify.register(fp(userPlugin), configuration)
-    fastify.ready(done)
+    fastify = Fastify({ logger: { level: 'silent' } })
+    fastify.register(require('fastify-mongodb'), { url: MONGODB_URL })
+      .decorate('config', configuration)
+      .register(userPlugin)
+      .ready(done)
   })
 
   after('destroy fastify', done => {
@@ -39,7 +37,7 @@ describe('user', () => {
     const USERNAME = 'the-user-1'
     const PASSWORD = 'the-password'
 
-    const regRes = await makeRequest(fastify, {
+    const regRes = await fastify.inject({
       method: 'POST',
       url: '/register',
       headers: {
@@ -50,9 +48,9 @@ describe('user', () => {
         password: PASSWORD
       })
     })
-    assert.equal(200, regRes.statusCode)
+    assert.equal(200, regRes.statusCode, regRes.payload)
 
-    const loginRes = await makeRequest(fastify, {
+    const loginRes = await fastify.inject({
       method: 'POST',
       url: '/login',
       headers: {
@@ -63,11 +61,11 @@ describe('user', () => {
         password: PASSWORD
       })
     })
-    assert.equal(200, loginRes.statusCode)
+    assert.equal(200, loginRes.statusCode, loginRes.payload)
     const { jwt } = JSON.parse(loginRes.payload)
     assert.ok(jwt)
 
-    const getMeRes = await makeRequest(fastify, {
+    const getMeRes = await fastify.inject({
       method: 'GET',
       url: '/me',
       headers: {
@@ -86,7 +84,7 @@ describe('user', () => {
     const USERNAMES = [ 'user-foo-1', 'user-foo-2', 'user-foo-3', 'another-user' ]
 
     await Promise.all(USERNAMES.map(username => {
-      return makeRequest(fastify, {
+      return fastify.inject({
         method: 'POST',
         url: '/register',
         headers: {
@@ -102,7 +100,7 @@ describe('user', () => {
         })
     }))
 
-    const searchRes = await makeRequest(fastify, {
+    const searchRes = await fastify.inject({
       method: 'GET',
       url: '/search?search=-foo-'
     })

@@ -5,28 +5,51 @@ const timelinePlugin = require('../timeline')
 
 const assert = require('assert')
 const nock = require('nock')
-const MongoClient = require('mongodb').MongoClient
 const Fastify = require('fastify')
+const fp = require('fastify-plugin')
 
-const makeRequest = (fastify, options) => new Promise((resolve) => fastify.inject(options, resolve))
+let getMeArguments = []
+let getMeReturn = []
+async function fakeUserClient (fastify) {
+  fastify.decorate('userClient', {
+    getMe: function (req) {
+      getMeArguments.push(req)
+      return getMeReturn.shift()
+    }
+  })
+}
 
-const configuration = {
-  TWEET_MONGO_URL: 'mongodb://localhost/tweet'
+let getFollowArguments = []
+let getFollowReturn = []
+async function fakeFollowClient (fastify) {
+  fastify.decorate('followClient', {
+    getMyFollowing: function (req) {
+      getFollowArguments.push(req)
+      return getFollowReturn.shift()
+    }
+  })
+}
+
+let getTweetArguments = []
+let getTweetReturn = []
+async function fakeTweetClient (fastify) {
+  fastify.decorate('tweetClient', {
+    getTweets: function (req) {
+      getTweetArguments.push(req)
+      return getTweetReturn.shift()
+    }
+  })
 }
 
 let fastify
 describe('timeline', () => {
-  before('drop mongo', () => {
-    return MongoClient.connect(configuration.TWEET_MONGO_URL)
-      .then(mongoClient => {
-        mongoClient.unref()
-        return mongoClient.dropDatabase()
-      })
-  })
   before('create fastify instance', (done) => {
-    fastify = Fastify({ level: 'silent' })
-    fastify.register(timelinePlugin, configuration)
-    fastify.ready(done)
+    fastify = Fastify({ logger: { level: 'silent' } })
+    fastify.register(fp(fakeUserClient))
+      .register(fp(fakeTweetClient))
+      .register(fp(fakeFollowClient))
+      .register(timelinePlugin)
+      .ready(done)
   })
   before(() => nock.disableNetConnect())
   after(() => nock.enableNetConnect())
@@ -64,23 +87,17 @@ describe('timeline', () => {
       }
     ]
 
-    const getMeNockScope = nock('http://localhost:3001')
-      .replyContentLength()
-      .get('/api/user/me')
-      .reply(200, {
-        _id: USER_ID,
-        username: USERNAME
-      })
-      .get('/api/follow/following/' + USER_ID)
-      .reply(200, [
-        USER_ID_1,
-        USER_ID_2,
-        USER_ID_3
-      ])
-      .get('/api/tweet/' + [ USER_ID_1, USER_ID_2, USER_ID_3, USER_ID ].join(','))
-      .reply(200, followingTweets)
+    getMeReturn = [
+      { _id: USER_ID, username: USERNAME }
+    ]
+    getFollowReturn = [
+      [ USER_ID_1, USER_ID_2, USER_ID_3 ]
+    ]
+    getTweetReturn = [
+      followingTweets
+    ]
 
-    const res = await makeRequest(fastify, {
+    const res = await fastify.inject({
       method: 'GET',
       url: '/',
       headers: {
@@ -93,7 +110,5 @@ describe('timeline', () => {
 
     assert.equal(body.length, 4, res.payload)
     assert.deepEqual(body, followingTweets)
-
-    getMeNockScope.done()
   })
 })
