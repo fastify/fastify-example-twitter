@@ -32,7 +32,15 @@ async function connectToDatabases (fastify) {
     // `fastify-mongodb` makes this connection and store the database instance into `fastify.mongo.db`
     // See https://github.com/fastify/fastify-mongodb
     .register(require('fastify-mongodb'), { url: fastify.config.MONGODB_URL })
+    // `fastify-redis` makes this connection and store the database instance into `fastify.redis`
+    // See https://github.com/fastify/fastify-redis
     .register(require('fastify-redis'), { url: fastify.config.REDIS_URL })
+    // JWT is used to identify the user
+    // See https://github.com/fastify/fastify-jwt
+    .register(require('fastify-jwt'), {
+      secret: fastify.config.JWT_SECRET,
+      algorithms: ['RS256']
+    })
 }
 
 module.exports = async function (fastify, opts) {

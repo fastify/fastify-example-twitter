@@ -12,8 +12,7 @@ const UserService = require('./UserService')
 
 module.exports = async function (fastify, opts) {
   if (!fastify.mongo) throw new Error('`fastify.mongo` is undefined')
-  if (!fastify.config) throw new Error('`fastify.config` is undefined')
-  if (!fastify.config.JWT_SECRET) throw new Error('`fastify.config.JWT_SECRET` is undefined')
+  if (!fastify.jwt) throw new Error('`fastify.jwt` is undefined')
 
   // setup USER_COLLECTION_NAME collection with validator and indexes
   const db = fastify.mongo.db
@@ -27,34 +26,22 @@ module.exports = async function (fastify, opts) {
   })
   await userCollection.createIndex({ username: 1 }, {unique: true})
 
-  fastify
-    // JWT is used to identify the user
-    // In `fastify` instance will have `verify` and `decode` method
-    // See https://github.com/fastify/fastify-jwt
-    .register(require('fastify-jwt'), {
-      secret: fastify.config.JWT_SECRET,
-      algorithms: ['RS256']
-    })
-    // When this handler is called, `fastify-jwt` is initialized
-    // decorating `fastify` instance with `jwt` property
-    .register(async function (fastify) {
-      const userService = new UserService(userCollection, fastify.jwt)
-      // This decoration will be use to call our business logic
-      fastify.decorate('userService', userService)
-      // This decoration is only a short cut
-      fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
+  const userService = new UserService(userCollection, fastify.jwt)
+  // This decoration will be use to call our business logic
+  fastify.decorate('userService', userService)
+  // This decoration is only a short cut
+  fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
 
-      // Route registration
-      // fastify.<method>(<path>, <schema>, <handler>)
-      // schema is used to validate the input and serialize the output
-      // In all handlers the `this` is the `fastify` instance
-      // in which the decorations defined above are available
-      fastify.post('/login', loginSchema, loginHandler)
-      fastify.post('/register', registrationSchema, registerHandler)
-      fastify.get('/me', meHandler)
-      fastify.get('/:userId', getProfileSchema, userHandler)
-      fastify.get('/search', searchSchema, searchHandler)
-    })
+  // Route registration
+  // fastify.<method>(<path>, <schema>, <handler>)
+  // schema is used to validate the input and serialize the output
+  // In all handlers the `this` is the `fastify` instance
+  // in which the decorations defined above are available
+  fastify.post('/login', loginSchema, loginHandler)
+  fastify.post('/register', registrationSchema, registerHandler)
+  fastify.get('/me', meHandler)
+  fastify.get('/:userId', getProfileSchema, userHandler)
+  fastify.get('/search', searchSchema, searchHandler)
 }
 
 async function loginHandler (req, reply) {
@@ -65,8 +52,8 @@ async function loginHandler (req, reply) {
 
 async function registerHandler (req, reply) {
   const { username, password } = req.body
-  await this.userService.register(username, password)
-  return {}
+  const userId = await this.userService.register(username, password)
+  return { userId }
 }
 
 async function meHandler (req, reply) {

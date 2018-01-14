@@ -6,9 +6,32 @@ const userPlugin = require('../user')
 const assert = require('assert')
 const MongoClient = require('mongodb').MongoClient
 const Fastify = require('fastify')
+const fp = require('fastify-plugin')
 
 const MONGODB_URL = 'mongodb://localhost:27017/test'
-const configuration = { JWT_SECRET: 'the secret' }
+
+let signArguments = []
+let signReturn = []
+let verifyArguments = []
+let verifyReturn = []
+let decodeArguments = []
+let decodeReturn = []
+async function fakeJWT (fastify) {
+  fastify.decorate('jwt', {
+    sign: function (payload) {
+      signArguments.push(payload)
+      return signReturn.shift()
+    },
+    verify: function (token) {
+      verifyArguments.push(token)
+      return verifyReturn.shift()
+    },
+    decode: function (token) {
+      decodeArguments.push(token)
+      return decodeReturn.shift()
+    }
+  })
+}
 
 let fastify
 describe('user', () => {
@@ -23,7 +46,7 @@ describe('user', () => {
   before('create fastify instance', (done) => {
     fastify = Fastify({ logger: { level: 'silent' } })
     fastify.register(require('fastify-mongodb'), { url: MONGODB_URL })
-      .decorate('config', configuration)
+      .register(fp(fakeJWT))
       .register(userPlugin)
       .ready(done)
   })
@@ -33,9 +56,16 @@ describe('user', () => {
     fastify.close(done)
   })
 
+  beforeEach(() => { signArguments = [] })
+  beforeEach(() => { signReturn = [] })
+
   it('registration + login', async () => {
     const USERNAME = 'the-user-1'
     const PASSWORD = 'the-password'
+
+    signReturn = [
+      'the jwt token'
+    ]
 
     const regRes = await fastify.inject({
       method: 'POST',
@@ -49,6 +79,11 @@ describe('user', () => {
       })
     })
     assert.equal(200, regRes.statusCode, regRes.payload)
+    const { userId } = JSON.parse(regRes.payload)
+
+    decodeReturn = [
+      { username: USERNAME, _id: userId }
+    ]
 
     const loginRes = await fastify.inject({
       method: 'POST',
@@ -63,7 +98,7 @@ describe('user', () => {
     })
     assert.equal(200, loginRes.statusCode, loginRes.payload)
     const { jwt } = JSON.parse(loginRes.payload)
-    assert.ok(jwt)
+    assert.equal(jwt, 'the jwt token')
 
     const getMeRes = await fastify.inject({
       method: 'GET',
@@ -73,7 +108,7 @@ describe('user', () => {
         'Authorization': 'Baerer ' + jwt
       }
     })
-    assert.equal(200, getMeRes.statusCode)
+    assert.equal(200, getMeRes.statusCode, getMeRes.payload)
     const { username, password, _id } = JSON.parse(getMeRes.payload)
     assert.equal(USERNAME, username)
     assert.equal(undefined, password)

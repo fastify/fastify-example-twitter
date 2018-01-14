@@ -21,6 +21,8 @@ class UserService {
     }
 
     if (writeResult.insertedCount !== 1) throw Boom.badRequest('Boh...')
+
+    return writeResult.insertedIds[0]
   }
 
   async login (username, password) {

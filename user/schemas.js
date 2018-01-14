@@ -22,8 +22,10 @@ const registration = {
       response: {
         200: {
           type: 'object',
-          required: [ ],
-          properties: { },
+          required: [ 'userId' ],
+          properties: {
+            userId: { type: 'string' }
+          },
           additionalProperties: false
         }
       }
