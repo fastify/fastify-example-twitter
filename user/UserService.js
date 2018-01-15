@@ -31,7 +31,7 @@ class UserService {
 
     if (!user) throw Boom.badData('Wrong credentials')
 
-    return this.jwt.sign(user)
+    return user
   }
 
   async getProfile (_id) {
@@ -45,16 +45,6 @@ class UserService {
     }
     const users = await this.userCollection.find(query, {password: 0}).limit(5).toArray()
     return users
-  }
-
-  decode (jwt) {
-    try {
-      this.jwt.verify(jwt)
-    } catch (e) {
-      throw Boom.unauthorized()
-    }
-
-    return this.jwt.decode(jwt)
   }
 }
 

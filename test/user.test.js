@@ -10,26 +10,18 @@ const fp = require('fastify-plugin')
 
 const MONGODB_URL = 'mongodb://localhost:27017/test'
 
-let signArguments = []
-let signReturn = []
-let verifyArguments = []
-let verifyReturn = []
-let decodeArguments = []
-let decodeReturn = []
-async function fakeJWT (fastify) {
-  fastify.decorate('jwt', {
-    sign: function (payload) {
-      signArguments.push(payload)
-      return signReturn.shift()
-    },
-    verify: function (token) {
-      verifyArguments.push(token)
-      return verifyReturn.shift()
-    },
-    decode: function (token) {
-      decodeArguments.push(token)
-      return decodeReturn.shift()
-    }
+let getUserIdFromRequestArguments = []
+let getUserIdFromRequestReturn = []
+let getAuthenticationTokenForUserArguments = []
+let getAuthenticationTokenForUserReturn = []
+async function fakeAuth (fastify) {
+  fastify.decorate('getUserIdFromRequest', function (payload) {
+    getUserIdFromRequestArguments.push(payload)
+    return getUserIdFromRequestReturn.shift()
+  })
+  fastify.decorate('getAuthenticationTokenForUser', function (payload) {
+    getAuthenticationTokenForUserArguments.push(payload)
+    return getAuthenticationTokenForUserReturn.shift()
   })
 }
 
@@ -46,7 +38,7 @@ describe('user', () => {
   before('create fastify instance', (done) => {
     fastify = Fastify({ logger: { level: 'silent' } })
     fastify.register(require('fastify-mongodb'), { url: MONGODB_URL })
-      .register(fp(fakeJWT))
+      .register(fp(fakeAuth))
       .register(userPlugin)
       .ready(done)
   })
@@ -56,16 +48,11 @@ describe('user', () => {
     fastify.close(done)
   })
 
-  beforeEach(() => { signArguments = [] })
-  beforeEach(() => { signReturn = [] })
-
   it('registration + login', async () => {
     const USERNAME = 'the-user-1'
     const PASSWORD = 'the-password'
 
-    signReturn = [
-      'the jwt token'
-    ]
+    getAuthenticationTokenForUserReturn = [ 'the jwt token' ]
 
     const regRes = await fastify.inject({
       method: 'POST',
@@ -81,9 +68,7 @@ describe('user', () => {
     assert.equal(200, regRes.statusCode, regRes.payload)
     const { userId } = JSON.parse(regRes.payload)
 
-    decodeReturn = [
-      { username: USERNAME, _id: userId }
-    ]
+    getUserIdFromRequestReturn = [ userId ]
 
     const loginRes = await fastify.inject({
       method: 'POST',

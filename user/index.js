@@ -12,7 +12,8 @@ const UserService = require('./UserService')
 
 module.exports = async function (fastify, opts) {
   if (!fastify.mongo) throw new Error('`fastify.mongo` is undefined')
-  if (!fastify.jwt) throw new Error('`fastify.jwt` is undefined')
+  if (!fastify.getAuthenticationTokenForUser) throw new Error('`fastify.getAuthenticationTokenForUser` is undefined')
+  if (!fastify.getUserIdFromRequest) throw new Error('`fastify.getUserIdFromRequest` is undefined')
 
   // setup USER_COLLECTION_NAME collection with validator and indexes
   const db = fastify.mongo.db
@@ -26,7 +27,7 @@ module.exports = async function (fastify, opts) {
   })
   await userCollection.createIndex({ username: 1 }, {unique: true})
 
-  const userService = new UserService(userCollection, fastify.jwt)
+  const userService = new UserService(userCollection)
   // This decoration will be use to call our business logic
   fastify.decorate('userService', userService)
   // This decoration is only a short cut
@@ -46,8 +47,8 @@ module.exports = async function (fastify, opts) {
 
 async function loginHandler (req, reply) {
   const { username, password } = req.body
-  const jwt = await this.userService.login(username, password)
-  return {jwt}
+  const user = await this.userService.login(username, password)
+  return { jwt: this.getAuthenticationTokenForUser(user) }
 }
 
 async function registerHandler (req, reply) {
@@ -57,9 +58,8 @@ async function registerHandler (req, reply) {
 }
 
 async function meHandler (req, reply) {
-  const jwt = (req.req.headers.authorization || '').substr(7)
-  const decoded = this.userService.decode(jwt)
-  const user = await this.userService.getProfile(this.transformStringIntoObjectId(decoded._id))
+  const userId = this.getUserIdFromRequest(req)
+  const user = await this.userService.getProfile(this.transformStringIntoObjectId(userId))
   return user
 }
 

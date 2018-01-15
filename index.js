@@ -35,11 +35,26 @@ async function connectToDatabases (fastify) {
     // `fastify-redis` makes this connection and store the database instance into `fastify.redis`
     // See https://github.com/fastify/fastify-redis
     .register(require('fastify-redis'), { url: fastify.config.REDIS_URL })
+}
+
+async function authenticator (fastify) {
+  fastify
     // JWT is used to identify the user
     // See https://github.com/fastify/fastify-jwt
     .register(require('fastify-jwt'), {
       secret: fastify.config.JWT_SECRET,
       algorithms: ['RS256']
+    })
+    .register(require('fastify-auth'))
+    .after(() => {
+      fastify.decorate('getUserIfFromRequest', function (req) {
+        const jwt = (req.req.headers.authorization || '').substr(7)
+        const decoded = this.jwt.decode(jwt)
+        return decoded._id
+      })
+      fastify.decorate('getAuthenticationTokenForUser', function (user) {
+        return this.jwt.sign(user)
+      })
     })
 }
 
@@ -50,6 +65,7 @@ module.exports = async function (fastify, opts) {
     // See https://github.com/fastify/fastify-env
     .register(require('fastify-env'), { schema })
     .register(fp(connectToDatabases))
+    .register(fp(authenticator))
     .register(require('./user'))
     .register(require('./userClient'))
     /*
