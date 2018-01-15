@@ -5,7 +5,7 @@ const {
   unfollow: unfollowSchema,
   followers: followersSchema
 } = require('./schemas')
-const FollowService = require('./FollowService')
+const FollowService = require('./service')
 
 module.exports = async function (fastify, opts) {
   if (!fastify.redis) throw new Error('`fastify.redis` is undefined')

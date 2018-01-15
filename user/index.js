@@ -8,7 +8,7 @@ const {
   search: searchSchema,
   getProfile: getProfileSchema
 } = require('./schemas')
-const UserService = require('./UserService')
+const UserService = require('./service')
 
 module.exports = async function (fastify, opts) {
   if (!fastify.mongo) throw new Error('`fastify.mongo` is undefined')

@@ -6,7 +6,7 @@ const {
   tweet: tweetSchema,
   getTweets: getTweetsSchema
 } = require('./schemas')
-const TweetService = require('./TweetService')
+const TweetService = require('./service')
 
 module.exports = async function (fastify, opts) {
   if (!fastify.mongo) throw new Error('`fastify.mongo` is undefined')
