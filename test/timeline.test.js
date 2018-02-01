@@ -2,11 +2,15 @@
 'use strict'
 
 const timelinePlugin = require('../timeline')
+const { ObjectId } = require('mongodb')
 
-const assert = require('assert')
 const nock = require('nock')
 const Fastify = require('fastify')
 const fp = require('fastify-plugin')
+
+const t = require('tap')
+
+const USER_ID = new ObjectId()
 
 let getMeArguments = []
 let getMeReturn = []
@@ -39,34 +43,31 @@ async function fakeTweetClient (fastify) {
       return getTweetReturn.shift()
     }
   })
+  fastify.decorate('transformStringIntoObjectId', ObjectId)
+  fastify.decorate('getUserIdFromRequest', () => USER_ID)
 }
 
-let fastify
-describe('timeline', () => {
-  before('create fastify instance', (done) => {
-    fastify = Fastify({ logger: { level: 'silent' } })
-    fastify.register(fp(fakeUserClient))
-      .register(fp(fakeTweetClient))
-      .register(fp(fakeFollowClient))
-      .register(timelinePlugin)
-      .ready(done)
-  })
-  before(() => nock.disableNetConnect())
-  after(() => nock.enableNetConnect())
+t.test('timeline', async t => {
+  const fastify = Fastify({ logger: { level: 'silent' } })
+  fastify.register(fp(fakeUserClient))
+    .register(fp(fakeTweetClient))
+    .register(fp(fakeFollowClient))
+    .register(timelinePlugin)
 
-  after('destroy fastify', done => {
-    if (!fastify) return done()
-    fastify.close(done)
-  })
+  nock.disableNetConnect()
+  t.tearDown(() => nock.enableNetConnect())
 
-  it('get timeline', async () => {
-    const USER_ID = 'the-user-id'
+  t.plan(1)
+
+  t.test('get timeline', async t => {
+    t.plan(3)
+
     const USERNAME = 'the-user-1'
     const JSON_WEB_TOKEN = 'the-json-web-token'
 
-    const USER_ID_1 = 'the-user-id-1'
-    const USER_ID_2 = 'the-user-id-2'
-    const USER_ID_3 = 'the-user-id-3'
+    const USER_ID_1 = new ObjectId()
+    const USER_ID_2 = new ObjectId()
+    const USER_ID_3 = new ObjectId()
 
     const followingTweets = [
       {
@@ -104,11 +105,11 @@ describe('timeline', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    t.equal(200, res.statusCode, res.payload)
 
     const body = JSON.parse(res.payload)
 
-    assert.equal(body.length, 4, res.payload)
-    assert.deepEqual(body, followingTweets)
+    t.equal(body.length, 4, res.payload)
+    t.deepEqual(body, JSON.parse(JSON.stringify(followingTweets)))
   })
 })

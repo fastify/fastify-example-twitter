@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "lint": "standard | snazzy",
-    "unit": "mocha test/*.test.js",
+    "coverage": "npm run unit -- --cov --coverage-report=text --coverage-report=html",
+    "unit": "tap test/*.test.js",
     "test": "npm run lint && npm run unit",
     "microservice": "fastify",
     "start": "fastify index.js"
@@ -14,23 +15,24 @@
   "license": "ISC",
   "dependencies": {
     "boom": "^5.2.0",
-    "fastify": "^0.39.1",
-    "fastify-env": "^0.3.0",
-    "fastify-jwt": "^0.1.1",
+    "fastify": "^0.41.0",
+    "fastify-cli": "^0.12.0",
+    "fastify-env": "^0.4.0",
+    "fastify-jwt": "^0.2.0",
     "fastify-mongodb": "^0.4.0",
     "fastify-plugin": "^0.2.1",
-    "fastify-redis": "^0.3.0",
+    "fastify-redis": "^0.4.0",
     "fastify-static": "^0.6.0",
-    "fastify-swagger": "^0.3.0",
+    "fastify-swagger": "^0.3.1",
     "fastseries": "^1.7.2",
     "got": "^7.1.0"
   },
   "devDependencies": {
-    "mocha": "^3.5.3",
     "mongodb": "^2.2.31",
-    "nock": "^9.0.14",
+    "nock": "^9.1.6",
     "pre-commit": "^1.2.2",
     "snazzy": "^7.0.0",
-    "standard": "^10.0.3"
+    "standard": "^10.0.3",
+    "tap": "^11.0.1"
   }
 }

@@ -1,5 +1,7 @@
 'use strict'
 
+const fp = require('fastify-plugin')
+
 const {
   follow: followSchema,
   unfollow: unfollowSchema,
@@ -7,25 +9,41 @@ const {
 } = require('./schemas')
 const FollowService = require('./service')
 
-module.exports = async function (fastify, opts) {
-  if (!fastify.redis) throw new Error('`fastify.redis` is undefined')
-  if (!fastify.userClient) throw new Error('`fastify.userClient` is undefined')
+const FollowClient = require('./client')
 
+// See users/index.js for more explainations!
+module.exports = fp(async function (fastify, opts) {
   const followService = new FollowService(fastify.redis)
-  fastify.decorate('followService', followService)
 
-  fastify.addHook('preHandler', preHandler)
-  fastify.post('/follow', followSchema, followHandler)
-  fastify.post('/unfollow', unfollowSchema, unfollowHandler)
-  fastify.get('/following/me', getMyFollowingHandler)
-  fastify.get('/followers/me', getMyFollowersHandler)
-  fastify.get('/following/:userId', { config: { allowUnlogged: true } }, getUserFollowingHandler)
-  fastify.get('/followers/:userId', followersSchema, getUserFollowersHandler)
-}
+  fastify.decorate('followClient', new FollowClient(followService))
+
+  fastify.register(async function (fastify) {
+    fastify.decorate('followService', followService)
+
+    fastify.addHook('preHandler', preHandler)
+    fastify.post('/follow', followSchema, followHandler)
+    fastify.post('/unfollow', unfollowSchema, unfollowHandler)
+    fastify.get('/following/me', getMyFollowingHandler)
+    fastify.get('/followers/me', getMyFollowersHandler)
+    fastify.get('/following/:userId', { config: { allowUnlogged: true } }, getUserFollowingHandler)
+    fastify.get('/followers/:userId', followersSchema, getUserFollowersHandler)
+  }, { prefix: opts.prefix })
+}, {
+  decorators: {
+    fastify: [
+      'redis',
+      'userClient',
+      'getUserIdFromRequest',
+      'transformStringIntoObjectId'
+    ]
+  }
+})
 
 async function preHandler (req, reply) {
   try {
-    req.user = await this.userClient.getMe(req)
+    const userIdString = this.getUserIdFromRequest(req)
+    const userId = this.transformStringIntoObjectId(userIdString)
+    req.user = await this.userClient.getMe(userId)
   } catch (e) {
     if (!reply.context.config.allowUnlogged) {
       throw e

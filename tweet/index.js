@@ -2,16 +2,17 @@
 
 const TWEET_COLLECTION_NAME = 'tweet'
 
+const fp = require('fastify-plugin')
+const TweetClient = require('./client')
+
 const {
   tweet: tweetSchema,
   getTweets: getTweetsSchema
 } = require('./schemas')
 const TweetService = require('./service')
 
-module.exports = async function (fastify, opts) {
-  if (!fastify.mongo) throw new Error('`fastify.mongo` is undefined')
-  if (!fastify.userClient) throw new Error('`fastify.userClient` is undefined')
-
+// See users/index.js for more explainations!
+module.exports = fp(async function (fastify, opts) {
   const db = fastify.mongo.db
   const tweetCollection = await db.createCollection(TWEET_COLLECTION_NAME)
   await db.command({
@@ -25,19 +26,32 @@ module.exports = async function (fastify, opts) {
   await tweetCollection.createIndex({ 'user._id': 1 })
 
   const tweetService = new TweetService(tweetCollection)
-  fastify.decorate('tweetService', tweetService)
-  fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
+  fastify.decorate('tweetClient', new TweetClient(tweetService))
 
-  fastify.addHook('preHandler', preHandler)
-  fastify.post('/', tweetSchema, addTwitterHandler)
-  fastify.get('/', getTwitterHandler)
-  fastify.get('/:userIds', getTweetsSchema, getUserTweetsHandler)
-}
+  fastify.register(async function (fastify) {
+    fastify.decorate('tweetService', tweetService)
+
+    fastify.addHook('preHandler', preHandler)
+    fastify.post('/', tweetSchema, addTwitterHandler)
+    fastify.get('/', getTwitterHandler)
+    fastify.get('/:userIds', getTweetsSchema, getUserTweetsHandler)
+  }, { prefix: opts.prefix })
+}, {
+  decorators: {
+    fastify: [
+      'mongo',
+      'userClient',
+      'getUserIdFromRequest',
+      'transformStringIntoObjectId'
+    ]
+  }
+})
 
 async function preHandler (req, reply) {
   try {
-    req.user = await this.userClient.getMe(req)
-    req.user._id = this.transformStringIntoObjectId(req.user._id)
+    const userIdString = this.getUserIdFromRequest(req)
+    const userId = this.transformStringIntoObjectId(userIdString)
+    req.user = await this.userClient.getMe(userId)
   } catch (e) {
     if (!reply.context.config.allowUnlogged) {
       throw e

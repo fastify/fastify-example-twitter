@@ -1,5 +1,7 @@
 'use strict'
 
+const fp = require('fastify-plugin')
+
 const USER_COLLECTION_NAME = 'user'
 
 const {
@@ -8,13 +10,11 @@ const {
   search: searchSchema,
   getProfile: getProfileSchema
 } = require('./schemas')
+
 const UserService = require('./service')
+const UserClient = require('./client')
 
-module.exports = async function (fastify, opts) {
-  if (!fastify.mongo) throw new Error('`fastify.mongo` is undefined')
-  if (!fastify.getAuthenticationTokenForUser) throw new Error('`fastify.getAuthenticationTokenForUser` is undefined')
-  if (!fastify.getUserIdFromRequest) throw new Error('`fastify.getUserIdFromRequest` is undefined')
-
+module.exports = fp(async function (fastify, opts) {
   // setup USER_COLLECTION_NAME collection with validator and indexes
   const db = fastify.mongo.db
   const userCollection = await db.createCollection(USER_COLLECTION_NAME)
@@ -28,23 +28,47 @@ module.exports = async function (fastify, opts) {
   await userCollection.createIndex({ username: 1 }, {unique: true})
 
   const userService = new UserService(userCollection)
-  // This decoration will be use to call our business logic
-  fastify.decorate('userService', userService)
-  // This decoration is only a short cut
-  fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
+  // This is a fastify plugin.
+  // The following decorations are shared among all modules!
+  fastify.decorate('userClient', new UserClient(userService))
 
-  // Route registration
-  // fastify.<method>(<path>, <schema>, <handler>)
-  // schema is used to validate the input and serialize the output
-  // In all handlers the `this` is the `fastify` instance
-  // in which the decorations defined above are available
-  fastify.post('/login', loginSchema, loginHandler)
-  fastify.post('/register', registrationSchema, registerHandler)
-  fastify.get('/me', meHandler)
-  fastify.get('/:userId', getProfileSchema, userHandler)
-  fastify.get('/search', searchSchema, searchHandler)
-}
+  // This registration create an encaptulated module.
+  // All registration made inside aren't shared among the modules!
+  // Keep your business logic secret!
+  fastify.register(async function (fastify) {
+    // This decoration will be use to call our business logic
+    fastify.decorate('userService', userService)
 
+    // Route registration
+    // fastify.<method>(<path>, <schema>, <handler>)
+    // schema is used to validate the input and serialize the output
+    // In all handlers the `this` is the `fastify` instance
+    // in which the decorations defined above are available
+    fastify.post('/login', loginSchema, loginHandler)
+    fastify.post('/register', registrationSchema, registerHandler)
+    fastify.get('/me', meHandler)
+    fastify.get('/:userId', getProfileSchema, userHandler)
+    fastify.get('/search', searchSchema, searchHandler)
+  }, { prefix: opts.prefix })
+}, {
+  decorators: {
+    fastify: [
+      'mongo',
+      'getAuthenticationTokenForUser',
+      'getUserIdFromRequest',
+      'transformStringIntoObjectId'
+    ]
+  }
+})
+
+// In all handlers `this` is the fastify instance
+// The fastify instance used for the handler registration
+
+// This is the handler that implement the login
+// Fastify helps us to split the HTTP handler to business logic
+// Thank to previour decorations:
+// - `this.userService` is the instance of UserService
+// - `this.getAuthenticationTokenForUser` is the decoration made in "/index.js"
 async function loginHandler (req, reply) {
   const { username, password } = req.body
   const user = await this.userService.login(username, password)

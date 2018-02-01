@@ -3,13 +3,16 @@
 
 const tweetPlugin = require('../tweet')
 
-const assert = require('assert')
 const nock = require('nock')
-const { MongoClient } = require('mongodb')
+const { MongoClient, ObjectId } = require('mongodb')
 const Fastify = require('fastify')
 const fp = require('fastify-plugin')
 
+const t = require('tap')
+
 const MONGODB_URL = 'mongodb://localhost/test'
+
+const USER_ID = new ObjectId('59cfce2748c1f7eb59490b0a')
 
 let getMeArguments = []
 let getMeReturn = []
@@ -20,36 +23,30 @@ async function fakeUserClient (fastify) {
       return getMeReturn.shift()
     }
   })
+  fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId)
+  fastify.decorate('getUserIdFromRequest', () => USER_ID)
 }
 
-let fastify
-describe('tweet', () => {
-  before('drop mongo', () => {
-    return MongoClient.connect(MONGODB_URL)
-      .then(mongoClient => {
-        mongoClient.unref()
-        return mongoClient.dropDatabase()
-      })
-  })
-  before('create fastify instance', (done) => {
-    fastify = Fastify({ logger: { level: 'silent' } })
-    fastify.register(require('fastify-mongodb'), { url: MONGODB_URL })
-      .register(fp(fakeUserClient))
-      .register(tweetPlugin)
-      .ready(done)
-  })
-  before(() => nock.disableNetConnect())
-  after(() => nock.enableNetConnect())
+t.test('tweet', async t => {
+  const mongoClient = await MongoClient.connect(MONGODB_URL)
+  await mongoClient.dropDatabase()
+  t.tearDown(() => mongoClient.close())
 
-  beforeEach(() => { getMeArguments = [] })
+  const fastify = Fastify({ logger: { level: 'silent' } })
+  fastify.register(require('fastify-mongodb'), { url: MONGODB_URL })
+    .register(fp(fakeUserClient))
+    .register(tweetPlugin)
+  t.tearDown(() => fastify.close())
 
-  after('destroy fastify', done => {
-    if (!fastify) return done()
-    fastify.close(done)
-  })
+  nock.disableNetConnect()
+  t.tearDown(() => nock.enableNetConnect())
 
-  it('add a tweet + get tweets', async () => {
-    const USER_ID = '59cfce2748c1f7eb59490b0a'
+  t.plan(1)
+
+  t.test('add a tweet + get tweets', async t => {
+    t.plan(9)
+    getMeArguments = []
+
     const USERNAME = 'the-user-1'
     const TWEET_TEXT = 'the tweet text!'
     const JSON_WEB_TOKEN = 'the-json-web-token'
@@ -73,7 +70,7 @@ describe('tweet', () => {
         text: TWEET_TEXT
       })
     })
-    assert.equal(res.statusCode, 204, res.payload)
+    t.equal(res.statusCode, 204, res.payload)
 
     res = await fastify.inject({
       method: 'GET',
@@ -82,17 +79,17 @@ describe('tweet', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(res.statusCode, 200, res.payload)
+    t.equal(res.statusCode, 200, res.payload)
 
     const myTweetBody = JSON.parse(res.payload)
 
-    assert.equal(myTweetBody.length, 1, res.payload)
-    assert.ok(myTweetBody[0]._id)
-    assert.deepEqual(myTweetBody[0].user, {
-      _id: USER_ID,
+    t.equal(myTweetBody.length, 1, res.payload)
+    t.ok(myTweetBody[0]._id)
+    t.deepEqual(myTweetBody[0].user, {
+      _id: USER_ID + '',
       username: USERNAME
     })
-    assert.deepEqual(myTweetBody[0].text, TWEET_TEXT)
+    t.deepEqual(myTweetBody[0].text, TWEET_TEXT)
 
     res = await fastify.inject({
       method: 'GET',
@@ -101,10 +98,10 @@ describe('tweet', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(res.statusCode, 200, res.payload)
+    t.equal(res.statusCode, 200, res.payload)
     const userTweetBody = JSON.parse(res.payload)
-    assert.deepEqual(userTweetBody, myTweetBody)
+    t.deepEqual(userTweetBody, myTweetBody)
 
-    assert.equal(getMeArguments.length, 3)
+    t.equal(getMeArguments.length, 3)
   })
 })

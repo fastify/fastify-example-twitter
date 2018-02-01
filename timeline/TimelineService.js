@@ -1,16 +1,17 @@
 'use strict'
 
 class TimelineService {
-  constructor (followClient, tweetClient) {
+  constructor (followClient, tweetClient, transformStringIntoObjectId) {
     this.followClient = followClient
     this.tweetClient = tweetClient
+    this.transformStringIntoObjectId = transformStringIntoObjectId
   }
 
   async getTimeline (userId) {
     const followings = await this.followClient.getMyFollowing(userId)
-    followings.push(userId.toString())
-    const tweets = await this.tweetClient.getTweets(followings)
-    return tweets
+    const followerIds = followings.map(this.transformStringIntoObjectId)
+    followerIds.push(userId)
+    return this.tweetClient.getTweets(followerIds)
   }
 }
 

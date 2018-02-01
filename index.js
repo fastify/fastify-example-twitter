@@ -24,7 +24,8 @@ const schema = {
     MONGODB_URL: { type: 'string' },
     REDIS_URL: { type: 'string' },
     JWT_SECRET: { type: 'string' }
-  }
+  },
+  additionalProperties: false
 }
 
 async function connectToDatabases (fastify) {
@@ -45,17 +46,20 @@ async function authenticator (fastify) {
       secret: fastify.config.JWT_SECRET,
       algorithms: ['RS256']
     })
-    .register(require('fastify-auth'))
-    .after(() => {
-      fastify.decorate('getUserIfFromRequest', function (req) {
-        const jwt = (req.req.headers.authorization || '').substr(7)
-        const decoded = this.jwt.decode(jwt)
-        return decoded._id
-      })
-      fastify.decorate('getAuthenticationTokenForUser', function (user) {
-        return this.jwt.sign(user)
-      })
+}
+
+async function decorateFastifyInstance (fastify) {
+  fastify
+    .decorate('getUserIdFromRequest', function (req) {
+      const jwt = (req.req.headers.authorization || '').substr(7)
+      const decoded = this.jwt.decode(jwt)
+      return decoded._id
     })
+    .decorate('getAuthenticationTokenForUser', function (user) {
+      return this.jwt.sign(user)
+    })
+    // This decoration is only a short cut
+    .decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
 }
 
 module.exports = async function (fastify, opts) {
@@ -63,17 +67,14 @@ module.exports = async function (fastify, opts) {
     .register(require('fastify-swagger'), swaggerOption)
     // fastify-env checks and coerces the environment variables and save the result in `fastify.config`
     // See https://github.com/fastify/fastify-env
-    .register(require('fastify-env'), { schema })
+    .register(require('fastify-env'), { schema, data: [ process.env, opts ], env: false })
     .register(fp(connectToDatabases))
     .register(fp(authenticator))
-    .register(require('./user'))
-    .register(require('./userClient'))
-    /*
+    .register(fp(decorateFastifyInstance))
     .register(require('./user'), { prefix: '/api/user' })
     .register(require('./tweet'), { prefix: '/api/tweet' })
     .register(require('./follow'), { prefix: '/api/follow' })
     .register(require('./timeline'), { prefix: '/api/timeline' })
-    */
     .register(require('fastify-static'), {
       root: path.join(__dirname, 'frontend', 'build'),
       prefix: '/'

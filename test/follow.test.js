@@ -3,15 +3,19 @@
 
 const followPlugin = require('../follow')
 
-const assert = require('assert')
+const util = require('util')
 const nock = require('nock')
 const redis = require('redis')
 const client = redis.createClient()
 const Fastify = require('fastify')
 const fp = require('fastify-plugin')
 
+const t = require('tap')
+
 let getMeArguments = []
 let getMeReturn = []
+const USER_ID = 'the-user-id'
+
 async function fakeUserClient (fastify) {
   fastify.decorate('userClient', {
     getMe: function (req) {
@@ -19,33 +23,29 @@ async function fakeUserClient (fastify) {
       return getMeReturn.shift()
     }
   })
+  fastify.decorate('getUserIdFromRequest', () => USER_ID)
+  fastify.decorate('transformStringIntoObjectId', userIdString => userIdString)
 }
 
 const REDIS_URL = 'redis://localhost:6379'
 
-let fastify
-describe('follow', () => {
-  before('drop redis', done => {
-    client.flushall(done)
-  })
+t.test('follow', async t => {
+  await util.promisify(client.flushall).call(client)
+  t.tearDown(done => client.end(done))
 
-  before('create fastify instance', (done) => {
-    fastify = Fastify({ logger: { level: 'silent' } })
-    fastify.register(require('fastify-redis'), { url: REDIS_URL })
-      .register(fp(fakeUserClient))
-      .register(followPlugin)
-      .ready(done)
-  })
-  before(() => nock.disableNetConnect())
-  after(() => nock.enableNetConnect())
+  nock.disableNetConnect()
+  t.tearDown(() => nock.enableNetConnect())
 
-  after('destroy fastify', done => {
-    if (!fastify) return done()
-    fastify.close(done)
-  })
+  const fastify = Fastify({ logger: { level: 'silent' } })
+  fastify.register(require('fastify-redis'), { url: REDIS_URL })
+    .register(fp(fakeUserClient))
+    .register(followPlugin)
+  t.tearDown(() => fastify.close())
 
-  it('follow + gets + unfollow + gets', async () => {
-    const USER_ID = 'the-user-id'
+  t.plan(1)
+
+  t.test('follow + gets + unfollow + gets', async t => {
+    t.plan(11)
     const USERNAME = 'the-user-1'
     const JSON_WEB_TOKEN = 'the-json-web-token'
 
@@ -73,7 +73,7 @@ describe('follow', () => {
         userId: OTHER_USER_ID
       })
     })
-    assert.equal(204, res.statusCode, res.payload)
+    t.equal(204, res.statusCode, res.payload)
 
     res = await fastify.inject({
       method: 'GET',
@@ -82,9 +82,9 @@ describe('follow', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    t.equal(200, res.statusCode, res.payload)
     body = JSON.parse(res.payload)
-    assert.deepStrictEqual(body, [OTHER_USER_ID])
+    t.deepEqual(body, [OTHER_USER_ID])
 
     res = await fastify.inject({
       method: 'GET',
@@ -93,9 +93,9 @@ describe('follow', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    t.equal(200, res.statusCode, res.payload)
     body = JSON.parse(res.payload)
-    assert.deepStrictEqual(body, [USER_ID])
+    t.deepEqual(body, [USER_ID])
 
     res = await fastify.inject({
       method: 'POST',
@@ -108,7 +108,7 @@ describe('follow', () => {
         userId: OTHER_USER_ID
       })
     })
-    assert.equal(204, res.statusCode, res.payload)
+    t.equal(204, res.statusCode, res.payload)
 
     res = await fastify.inject({
       method: 'GET',
@@ -117,9 +117,9 @@ describe('follow', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    t.equal(200, res.statusCode, res.payload)
     body = JSON.parse(res.payload)
-    assert.deepStrictEqual(body, [])
+    t.deepEqual(body, [])
 
     res = await fastify.inject({
       method: 'GET',
@@ -128,10 +128,10 @@ describe('follow', () => {
         'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    t.equal(200, res.statusCode, res.payload)
     body = JSON.parse(res.payload)
-    assert.deepStrictEqual(body, [])
+    t.deepEqual(body, [])
 
-    assert.deepStrictEqual(getMeArguments.length, 6)
+    t.deepEqual(getMeArguments.length, 6)
   })
 })

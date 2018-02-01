@@ -1,24 +1,38 @@
 'use strict'
 
+const fp = require('fastify-plugin')
+
 const {
   timeline: timelineSchema
 } = require('./schemas')
 const TimelineService = require('./TimelineService')
 
-module.exports = async function (fastify, opts) {
-  if (!fastify.userClient) throw new Error('`fastify.userClient` is undefined')
-  if (!fastify.followClient) throw new Error('`fastify.followClient` is undefined')
-  if (!fastify.tweetClient) throw new Error('`fastify.tweetClient` is undefined')
+// See users/index.js for more explainations!
+module.exports = fp(async function (fastify, opts) {
+  const timelineService = new TimelineService(fastify.followClient, fastify.tweetClient, fastify.transformStringIntoObjectId)
 
-  const timelineService = new TimelineService(fastify.followClient, fastify.tweetClient)
-  fastify.decorate('timelineService', timelineService)
-  fastify.addHook('preHandler', preHandler)
-  fastify.get('/', timelineSchema, getTimelineHandler)
-}
+  fastify.register(async function (fastify) {
+    fastify.decorate('timelineService', timelineService)
+    fastify.addHook('preHandler', preHandler)
+    fastify.get('/', timelineSchema, getTimelineHandler)
+  }, { prefix: opts.prefix })
+}, {
+  decorators: {
+    fastify: [
+      'userClient',
+      'followClient',
+      'tweetClient',
+      'getUserIdFromRequest',
+      'transformStringIntoObjectId'
+    ]
+  }
+})
 
 async function preHandler (req, reply) {
   try {
-    req.user = await this.userClient.getMe(req)
+    const userIdString = this.getUserIdFromRequest(req)
+    const userId = this.transformStringIntoObjectId(userIdString)
+    req.user = await this.userClient.getMe(userId)
   } catch (e) {
     if (!reply.context.config.allowUnlogged) {
       throw e
@@ -27,6 +41,5 @@ async function preHandler (req, reply) {
 }
 
 async function getTimelineHandler (req, reply) {
-  const tweets = await this.timelineService.getTimeline(req.user._id)
-  return tweets
+  return this.timelineService.getTimeline(req.user._id)
 }
