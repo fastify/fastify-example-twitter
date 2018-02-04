@@ -6,30 +6,26 @@ The aim of this project is to show how `fastify` can be used.
 
 ## Run
 
-### Pseudo-production
+For running this project on your machine:
 ```bash
-# build frontend
-cd frontend && npm run build && cd ..
-# start backend
+# terminal 1: Start frontend server
+cd frontend && npm start
+# terminal 2: start backend
+set -a
+source local.env
 npm start -- --log-level trace --port 3001
 ```
 
-Open your browser at [http://localhost:3001](http://localhost:3001)
-
-### Development
-```bash
-# start frontend server
-cd frontend && npm start
-# start backend
-npm start -- --log-level trace --port 3001 # in another terminal
-```
-
 Open your browser at [http://localhost:3000](http://localhost:3000)
+
+**NB** this project need to access a mongodb and a redis instance. If you haven't them, please consider to use docker.
 
 ## Backend
 
 ### Architecture
 
+
+Currently the backend is built considering the following modules:
 ```
 
 +------+   +-------+   +--------+  +----------+
@@ -46,49 +42,60 @@ Open your browser at [http://localhost:3000](http://localhost:3000)
 
 ```
 
-The backend is splitted into plugins:
+With this configuration, the backend can be developed keeping each business logic segregated in own plugin.
+For instance, the `TimelineService` is instanced only one time inside its module and the timeline module doesn't know the existance of the user module at all!
+
+Fastify helps us to keep this segregation: the plugin system provides us a way to declare pieces of our business logic without exposing them to the whole application. If you looking for a guide to understand better how the plugin system works, please read this [Plugin Guide](https://www.fastify.io/docs/latest/Plugins-Guide/)
+
+So, the backend is splitted into plugins:
 - *user*: user authentication / user database
 - *tweet*: tweet storage
 - *follow*: follow storage
 - *timeline*: timeline for homepage
-- *___Client*: clients to connect to other services
 
-Thankfully to `fastify-env`, each plugin describes the own configuration dependency and it's completely independent!
+Each plugin has almost the same structure:
+- `index.js` is the fastify binding
+- `service.js` is the business logic
+- `schemas.js` has the schemas used for http validation and serialization (See [`fastify` schemas](https://www.fastify.io/docs/latest/Validation-and-Serialization/))
+- `client.js` has a class that exports a connector for the business logic (See below)
 
-`fastify-swagger` plugin is used to provide the swagger file.
+In some circumstance a module has to have access to another module. For instance, when an user want to add a new tweet, the backend has to check which user is querying. In that situations the tweet module depends on the user module. In order to avoid sharing business logics, each module exposes its own client: in that way the developer chooses to which parts the other plugin can have an access.
 
-All plugins use `fastify-mongodb` for the data persistence.
-For the follow plugin the data is stored in redis thankfully to `fastify-redis`.
+Each module has some dependency checked by [`fastify-plugin`](https://github.com/fastify/fastify-plugin) like mongodb or redis client or other kind of dependency.
 
-Each plugins has the same structure:
-- `mongoCollectionSetup.js` that adds [mongodb schema validator](https://docs.mongodb.com/manual/core/document-validation/) and the indexes if needed.
-- `schemas.js` that describes the [`fastify` schemas](https://github.com/fastify/fastify/blob/master/docs/Validation-And-Serialize.md)
-- `*Service.js` that implements the plugin business logic
-- `index.js` that exports the routes as a [`fastify` plugin](https://github.com/fastify/fastify/blob/master/docs/Plugins.md) and builds the setup
 
-The communication between the plugin, some HTTP requests are made internally.
+All plugins are registered in the `index.js` file in the right order.
+
 The user authentication is made through JSON Web Token using `fastify-jwt`.
-This token is used to identify the user between plugins.
+
 
 ### User plugin
 
-This plugin registers some APIs in order to register, login, search and get a profile for an user
+This plugin registers some APIs in order to register, login, search and get a profile for an user.
+
+It uses `mongodb` to save users and exports a `userClient` to allow other plugins to access to an user profile.
 
 ### Tweet plugin
 
-This plugin stores the tweets and allows you to retrieve the tweets of an user.
+This plugin stores tweets and allows you to retrieve the tweets of an user.
+
+It uses `mongodb` for storing the tweets and exports a client for tweets retrieving.
 
 ### Follow plugin
 
-This plugin tracks the following and the followers implementing the flow explained [here](https://redis.io/topics/twitter-clone)
+This plugin tracks the following and the followers implementing the flow explained [here](https://redis.io/topics/twitter-clone).
+
+It uses `redis` for tracking which users follow the other ones and vice versa. This plugin exports a client in order to find the tweet given a list of users.
 
 ### Timeline plugin
 
-This plugin aggregates informations from `tweet` and `follow` plugin in order to return the tweet timeline
+This plugin aggregates informations from `tweet` and `follow` plugin in order to return the tweet timeline.
+
+This plugin doesn't use any database to track that informations and uses tweetClient and followClient to build the response.
 
 ## Frontend
 
-The frontend side has been done only to show a simple UI for avoiding the manual curls.
+The frontend side has been done only to show a simple UI for avoiding the manual CURLs.
 
 It is built using `react` + `redux` stack.
 
@@ -96,39 +103,10 @@ No UX or UI study are made (please PR!)
 
 ## Split for building microservices
 
-Once your code is written, you'd like to split it into many services for scaling purpose.
+Now our code is a monolith. But is a nice monolith!
+Our code is split keeping the logic separated: this is the good thing.
 
-`fastify` allows to you to split your code without doing any changes!
-How? When the code is built, `fastify` eases the developer to keep different logics separated thankfully to the encapsulation
-
-First of all, let's build the frontend:
-```sh
-cd frontend
-npm run build
-cd ..
-```
-
-Then,
-```sh
-cd docker
-docker-compose up
-```
-
-### .Dockerfile
-
-These files are very simple Dockerfile. Each Dockerfile inherits directly from nodejs docker image, adding the needed environment variables, exposing the right HTTP port and start the process.
-
-Thankfully to `fastify-cli`, `npm run microservice` is a script described in `package.json` file that allows you to start a **single** plugin as a server. Passing the right parameters, each Dockerfile starts the right plugin with the right prefix.
-
-### Nginx
-
-The nginx configuration describes how the external incoming request should be proxied to the right service.
-
-*NB:* to describe the upstream, nginx needs to know where the microservices are. To do this, nginx uses hostnames that are automatically resolved by docker compose. The standard ports are used in order to reduce the complexity.
-
-### Databases
-
-MongoDB and Redis start using the official docker images
+***Coming soon***
 
 ## TODO
 
