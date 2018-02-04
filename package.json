@@ -7,7 +7,8 @@
     "lint": "standard | snazzy",
     "coverage": "npm run unit -- --cov --coverage-report=text --coverage-report=html",
     "unit": "tap test/*.test.js",
-    "test": "npm run lint && npm run unit",
+    "test": "npm run lint && npm run build-frontend && npm run unit",
+    "build-frontend": "cd frontend && npm install && npm run build",
     "microservice": "fastify",
     "start": "fastify index.js"
   },
