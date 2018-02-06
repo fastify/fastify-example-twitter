@@ -5,7 +5,7 @@ const fp = require('fastify-plugin')
 const {
   timeline: timelineSchema
 } = require('./schemas')
-const TimelineService = require('./TimelineService')
+const TimelineService = require('./service')
 
 // See users/index.js for more explainations!
 module.exports = fp(async function (fastify, opts) {
