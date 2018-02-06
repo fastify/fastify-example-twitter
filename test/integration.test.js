@@ -20,7 +20,7 @@ const JWT_SECRET = 'the-secret'
 
 t.test('integration', async t => {
   const mongoClient = await MongoClient.connect(MONGODB_URL)
-  await mongoClient.dropDatabase()
+  await mongoClient.db('testIntegration').dropDatabase()
   t.tearDown(() => mongoClient.close())
 
   await util.promisify(client.flushall).call(client)

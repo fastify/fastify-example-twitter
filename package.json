@@ -10,30 +10,31 @@
     "test": "npm run lint && npm run build-frontend && npm run unit",
     "build-frontend": "cd frontend && npm install && npm run build",
     "microservice": "fastify",
-    "start": "fastify index.js"
+    "start": "env-cmd local.env fastify index.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "boom": "^5.2.0",
-    "fastify": "^0.41.0",
+    "env-cmd": "^7.0.0",
+    "fastify": "^0.43.0",
     "fastify-cli": "^0.12.0",
     "fastify-env": "^0.4.0",
     "fastify-jwt": "^0.2.0",
-    "fastify-mongodb": "^0.4.0",
+    "fastify-mongodb": "^0.5.0",
     "fastify-plugin": "^0.2.1",
     "fastify-redis": "^0.4.0",
-    "fastify-static": "^0.6.0",
+    "fastify-static": "^0.8.0",
     "fastify-swagger": "^0.3.1",
     "fastseries": "^1.7.2",
     "got": "^7.1.0"
   },
   "devDependencies": {
-    "mongodb": "^2.2.31",
+    "mongodb": "^3.0.2",
     "nock": "^9.1.6",
     "pre-commit": "^1.2.2",
     "snazzy": "^7.0.0",
     "standard": "^10.0.3",
-    "tap": "^11.0.1"
+    "tap": "^11.1.0"
   }
 }

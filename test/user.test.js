@@ -28,7 +28,7 @@ async function fakeDecoration (fastify) {
 
 t.test('user', async t => {
   const mongoClient = await MongoClient.connect(MONGODB_URL)
-  await mongoClient.dropDatabase()
+  await mongoClient.db('test').dropDatabase()
   t.tearDown(() => mongoClient.close())
 
   const fastify = Fastify({ logger: { level: 'silent' } })

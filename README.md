@@ -11,8 +11,6 @@ For running this project on your machine:
 # terminal 1: Start frontend server
 cd frontend && npm start
 # terminal 2: start backend
-set -a
-source local.env
 npm start -- --log-level trace --port 3001
 ```
 

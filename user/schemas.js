@@ -1,11 +1,20 @@
 'use strict'
 
+// This file contains the fastify input and output schema
+
+const userProfileOutput = {
+  type: 'object',
+  require: [ '_id', 'username' ],
+  properties: {
+    _id: { type: 'string' },
+    username: { type: 'string' }
+  }
+}
+
 const registration = {
   schema: {
     schema: {
-      description: 'post some data',
-      tags: ['user', 'code'],
-      summary: 'qwerty',
+      // This jsonschema will be used for data validation
       body: {
         type: 'object',
         required: [ 'username', 'password' ],
@@ -20,6 +29,8 @@ const registration = {
         additionalProperties: false
       },
       response: {
+        // The 200 body response is described
+        // by the following schema
         200: {
           type: 'object',
           required: [ 'userId' ],
@@ -70,15 +81,7 @@ const search = {
     response: {
       200: {
         type: 'array',
-        items: {
-          type: 'object',
-          require: [ '_id', 'username' ],
-          properties: {
-            _id: { type: 'string' },
-            username: { type: 'string' }
-          },
-          additionalProperties: false
-        }
+        items: userProfileOutput
       }
     }
   }
@@ -95,6 +98,9 @@ const getProfile = {
           pattern: '^[0-9a-fA-F]{24}'
         }
       }
+    },
+    response: {
+      200: userProfileOutput
     }
   }
 }

@@ -26,7 +26,7 @@ class UserService {
   }
 
   async login (username, password) {
-    const users = await this.userCollection.find({ username, password }, {password: 0}).toArray()
+    const users = await this.userCollection.find({ username, password }, { projection: {password: 0} }).toArray()
     const user = users[0]
 
     if (!user) throw Boom.badData('Wrong credentials')
@@ -34,16 +34,15 @@ class UserService {
     return user
   }
 
-  async getProfile (_id) {
-    const users = await this.userCollection.find({ _id }, {password: 0}).toArray()
-    return users[0]
+  getProfile (_id) {
+    return this.userCollection.findOne({ _id }, { projection: {password: 0} })
   }
 
   async search (searchString) {
     const query = {
       username: { $regex: searchString }
     }
-    const users = await this.userCollection.find(query, {password: 0}).limit(5).toArray()
+    const users = await this.userCollection.find(query, { projection: {password: 0} }).limit(5).toArray()
     return users
   }
 }
