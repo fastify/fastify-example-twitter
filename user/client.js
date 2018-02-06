@@ -1,13 +1,9 @@
 'use strict'
 
-class UserClient {
-  constructor (userService) {
-    this._userService = userService
-  }
-
-  getMe (_id) {
-    return this._userService.getProfile(_id)
+module.exports = function (userService) {
+  return {
+    getMe (_id) {
+      return userService.getProfile(_id)
+    }
   }
 }
-
-module.exports = UserClient
