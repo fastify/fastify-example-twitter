@@ -62,18 +62,25 @@ async function decorateFastifyInstance (fastify) {
     .decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
 }
 
+// This preHandler hook injects the user inside the request object
 async function preHandler (req, reply) {
   try {
     const userIdString = this.getUserIdFromRequest(req)
     const userId = this.transformStringIntoObjectId(userIdString)
     req.user = await this.userClient.getMe(userId)
   } catch (e) {
+    // This is a trick:
+    // reply.context.config is an object set during the route registration
+    // See https://github.com/fastify/fastify/blob/master/docs/Routes.md#full-declaration
     if (!reply.context.config.allowUnlogged) {
       throw e
     }
   }
 }
 
+// This plugin register all other plugin.
+// This allow us to group logically the routes
+// All the registered module here has a preHandler hook!
 const protectedModules = fp(async function protectedModules (fastify) {
   fastify.addHook('preHandler', preHandler)
 

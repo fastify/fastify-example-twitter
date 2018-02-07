@@ -28,10 +28,15 @@ Currently the backend is built considering the following modules:
 
 +------+   +-------+   +--------+  +----------+
 |      |   |       |   |        |  |          |
-| user |   | tweet |   | follow |  | timeline |
+|      |   | tweet |   | follow |  | timeline |
 |      |   |       |   |        |  |          |
-+------+   +-------+   +--------+  +----------+
-   |           |           |            |
+| user |   +-------+   +--------+  +----------+
+|      |       |           |            |
+|      |       |           |            |
+|      |   +----------------------------------+
+|      |   |         auth pre handler         |
++------+   +----------------------------------+
+   |                       |
 +---------------------------------------------+
 |                                             |
 |                    fastify                  |
@@ -50,6 +55,8 @@ So, the backend is splitted into plugins:
 - *tweet*: tweet storage
 - *follow*: follow storage
 - *timeline*: timeline for homepage
+
+The last three modules have a `preHandler` hook to find which the user has made the request.
 
 Each plugin has almost the same structure:
 - `index.js` is the fastify binding
