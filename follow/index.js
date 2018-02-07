@@ -20,36 +20,21 @@ module.exports = fp(async function (fastify, opts) {
   fastify.register(async function (fastify) {
     fastify.decorate('followService', followService)
 
-    fastify.addHook('preHandler', preHandler)
-    fastify.post('/follow', followSchema, followHandler)
-    fastify.post('/unfollow', unfollowSchema, unfollowHandler)
-    fastify.get('/following/me', getMyFollowingHandler)
-    fastify.get('/followers/me', getMyFollowersHandler)
-    fastify.get('/following/:userId', { config: { allowUnlogged: true } }, getUserFollowingHandler)
-    fastify.get('/followers/:userId', followersSchema, getUserFollowersHandler)
+    fastify
+      .post('/follow', followSchema, followHandler)
+      .post('/unfollow', unfollowSchema, unfollowHandler)
+      .get('/following/me', getMyFollowingHandler)
+      .get('/followers/me', getMyFollowersHandler)
+      .get('/following/:userId', { config: { allowUnlogged: true } }, getUserFollowingHandler)
+      .get('/followers/:userId', followersSchema, getUserFollowersHandler)
   }, { prefix: opts.prefix })
 }, {
   decorators: {
     fastify: [
-      'redis',
-      'userClient',
-      'getUserIdFromRequest',
-      'transformStringIntoObjectId'
+      'redis'
     ]
   }
 })
-
-async function preHandler (req, reply) {
-  try {
-    const userIdString = this.getUserIdFromRequest(req)
-    const userId = this.transformStringIntoObjectId(userIdString)
-    req.user = await this.userClient.getMe(userId)
-  } catch (e) {
-    if (!reply.context.config.allowUnlogged) {
-      throw e
-    }
-  }
-}
 
 async function followHandler (req, reply) {
   const { userId } = req.body

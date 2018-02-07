@@ -31,7 +31,6 @@ module.exports = fp(async function (fastify, opts) {
   fastify.register(async function (fastify) {
     fastify.decorate('tweetService', tweetService)
 
-    fastify.addHook('preHandler', preHandler)
     fastify.post('/', tweetSchema, addTwitterHandler)
     fastify.get('/', getTwitterHandler)
     fastify.get('/:userIds', getTweetsSchema, getUserTweetsHandler)
@@ -40,24 +39,10 @@ module.exports = fp(async function (fastify, opts) {
   decorators: {
     fastify: [
       'mongo',
-      'userClient',
-      'getUserIdFromRequest',
       'transformStringIntoObjectId'
     ]
   }
 })
-
-async function preHandler (req, reply) {
-  try {
-    const userIdString = this.getUserIdFromRequest(req)
-    const userId = this.transformStringIntoObjectId(userIdString)
-    req.user = await this.userClient.getMe(userId)
-  } catch (e) {
-    if (!reply.context.config.allowUnlogged) {
-      throw e
-    }
-  }
-}
 
 async function addTwitterHandler (req, reply) {
   const { text } = req.body

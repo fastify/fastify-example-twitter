@@ -14,17 +14,12 @@ const MONGODB_URL = 'mongodb://localhost/test'
 
 const USER_ID = new ObjectId('59cfce2748c1f7eb59490b0a')
 
-let getMeArguments = []
-let getMeReturn = []
-async function fakeUserClient (fastify) {
-  fastify.decorate('userClient', {
-    getMe: function (req) {
-      getMeArguments.push(req)
-      return getMeReturn.shift()
-    }
+let userPrehandler = []
+async function injectUser (fastify) {
+  fastify.addHook('preHandler', async function (req, reply) {
+    req.user = userPrehandler.shift()
   })
   fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId)
-  fastify.decorate('getUserIdFromRequest', () => USER_ID)
 }
 
 t.test('tweet', async t => {
@@ -33,8 +28,9 @@ t.test('tweet', async t => {
   t.tearDown(() => mongoClient.close())
 
   const fastify = Fastify({ logger: { level: 'silent' } })
-  fastify.register(require('fastify-mongodb'), { url: MONGODB_URL })
-    .register(fp(fakeUserClient))
+  fastify
+    .register(require('fastify-mongodb'), { url: MONGODB_URL })
+    .register(fp(injectUser))
     .register(tweetPlugin)
   t.tearDown(() => fastify.close())
 
@@ -45,15 +41,14 @@ t.test('tweet', async t => {
 
   t.test('add a tweet + get tweets', async t => {
     t.plan(9)
-    getMeArguments = []
 
     const USERNAME = 'the-user-1'
     const TWEET_TEXT = 'the tweet text!'
     const JSON_WEB_TOKEN = 'the-json-web-token'
 
-    // getMeReturn is used to mock the `/me` request
+    // userPrehandler is used to mock the `/me` request
     // I don't like this! If you ate it please PR!!
-    getMeReturn = [
+    userPrehandler = [
       { _id: USER_ID, username: USERNAME },
       { _id: USER_ID, username: USERNAME },
       { _id: USER_ID, username: USERNAME }
@@ -102,6 +97,6 @@ t.test('tweet', async t => {
     const userTweetBody = JSON.parse(res.payload)
     t.deepEqual(userTweetBody, myTweetBody)
 
-    t.equal(getMeArguments.length, 3)
+    t.equal(userPrehandler.length, 0)
   })
 })

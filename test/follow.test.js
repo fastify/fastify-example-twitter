@@ -12,19 +12,13 @@ const fp = require('fastify-plugin')
 
 const t = require('tap')
 
-let getMeArguments = []
-let getMeReturn = []
+let userPrehandler = []
 const USER_ID = 'the-user-id'
 
-async function fakeUserClient (fastify) {
-  fastify.decorate('userClient', {
-    getMe: function (req) {
-      getMeArguments.push(req)
-      return getMeReturn.shift()
-    }
+async function injectUser (fastify) {
+  fastify.addHook('preHandler', async function (req, reply) {
+    req.user = userPrehandler.shift()
   })
-  fastify.decorate('getUserIdFromRequest', () => USER_ID)
-  fastify.decorate('transformStringIntoObjectId', userIdString => userIdString)
 }
 
 const REDIS_URL = 'redis://localhost:6379'
@@ -37,8 +31,9 @@ t.test('follow', async t => {
   t.tearDown(() => nock.enableNetConnect())
 
   const fastify = Fastify({ logger: { level: 'silent' } })
-  fastify.register(require('fastify-redis'), { url: REDIS_URL })
-    .register(fp(fakeUserClient))
+  fastify
+    .register(require('fastify-redis'), { url: REDIS_URL })
+    .register(fp(injectUser))
     .register(followPlugin)
   t.tearDown(() => fastify.close())
 
@@ -51,7 +46,7 @@ t.test('follow', async t => {
 
     const OTHER_USER_ID = '1111'
 
-    getMeReturn = [
+    userPrehandler = [
       { _id: USER_ID, username: USERNAME },
       { _id: USER_ID, username: USERNAME },
       { _id: USER_ID, username: USERNAME },
@@ -132,6 +127,6 @@ t.test('follow', async t => {
     body = JSON.parse(res.payload)
     t.deepEqual(body, [])
 
-    t.deepEqual(getMeArguments.length, 6)
+    t.deepEqual(userPrehandler.length, 0)
   })
 })

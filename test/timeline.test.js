@@ -12,14 +12,10 @@ const t = require('tap')
 
 const USER_ID = new ObjectId()
 
-let getMeArguments = []
-let getMeReturn = []
-async function fakeUserClient (fastify) {
-  fastify.decorate('userClient', {
-    getMe: function (req) {
-      getMeArguments.push(req)
-      return getMeReturn.shift()
-    }
+let userPrehandler = []
+async function injectUser (fastify) {
+  fastify.addHook('preHandler', async function (req, reply) {
+    req.user = userPrehandler.shift()
   })
 }
 
@@ -49,7 +45,8 @@ async function fakeTweetClient (fastify) {
 
 t.test('timeline', async t => {
   const fastify = Fastify({ logger: { level: 'silent' } })
-  fastify.register(fp(fakeUserClient))
+  fastify
+    .register(fp(injectUser))
     .register(fp(fakeTweetClient))
     .register(fp(fakeFollowClient))
     .register(timelinePlugin)
@@ -88,7 +85,7 @@ t.test('timeline', async t => {
       }
     ]
 
-    getMeReturn = [
+    userPrehandler = [
       { _id: USER_ID, username: USERNAME }
     ]
     getFollowReturn = [

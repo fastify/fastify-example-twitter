@@ -62,6 +62,35 @@ async function decorateFastifyInstance (fastify) {
     .decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
 }
 
+async function preHandler (req, reply) {
+  try {
+    const userIdString = this.getUserIdFromRequest(req)
+    const userId = this.transformStringIntoObjectId(userIdString)
+    req.user = await this.userClient.getMe(userId)
+  } catch (e) {
+    if (!reply.context.config.allowUnlogged) {
+      throw e
+    }
+  }
+}
+
+const protectedModules = fp(async function protectedModules (fastify) {
+  fastify.addHook('preHandler', preHandler)
+
+  fastify
+    .register(require('./tweet'), { prefix: '/api/tweet' })
+    .register(require('./follow'), { prefix: '/api/follow' })
+    .register(require('./timeline'), { prefix: '/api/timeline' })
+}, {
+  decorators: {
+    fastify: [
+      'getUserIdFromRequest',
+      'transformStringIntoObjectId',
+      'userClient'
+    ]
+  }
+})
+
 module.exports = async function (fastify, opts) {
   fastify
     .register(require('fastify-swagger'), swaggerOption)
@@ -72,9 +101,7 @@ module.exports = async function (fastify, opts) {
     .register(fp(authenticator))
     .register(fp(decorateFastifyInstance))
     .register(require('./user'), { prefix: '/api/user' })
-    .register(require('./tweet'), { prefix: '/api/tweet' })
-    .register(require('./follow'), { prefix: '/api/follow' })
-    .register(require('./timeline'), { prefix: '/api/timeline' })
+    .register(protectedModules)
     .register(require('fastify-static'), {
       root: path.join(__dirname, 'frontend', 'build'),
       prefix: '/'
