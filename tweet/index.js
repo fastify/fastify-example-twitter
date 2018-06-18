@@ -28,7 +28,7 @@ module.exports = async function (fastify, opts) {
     })
 
     fastify.register(fp(async function decorateWithTweetCollection (fastify, opts) {
-      fastify.decorate('tweetCollection', fastify.mongo.db.collection('users'))
+      fastify.decorate('tweetCollection', fastify.mongo.db.collection('tweets'))
     }))
 
     fastify.register(async function (fastify, opts) {
