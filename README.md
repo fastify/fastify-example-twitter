@@ -1,5 +1,7 @@
 # Fastify twitter clone
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/fastify/fastify-example-twitter.svg)](https://greenkeeper.io/)
+
 The aim of this project is to show how `fastify` can be used.
 
 **NB:** This project should be considered WIP and it does not reflect the best way we think fastify should be used, but it's rather an experiment to help driving fastify.
