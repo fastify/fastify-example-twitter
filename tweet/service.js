@@ -18,11 +18,24 @@ class TweetService {
   }
 
   async addTweet (user, text) {
-    await this.tweetCollection.insert({
+    await this.tweetCollection.insertOne({
       user,
       text,
       createdAt: new Date()
     })
+  }
+
+  async ensureIndexes (db) {
+    await db.command({
+      'collMod': this.tweetCollection.collectionName,
+      validator: {
+        user: { $type: 'object' },
+        'user._id': { $type: 'string' },
+        'user.username': { $type: 'string' },
+        text: { $type: 'string' }
+      }
+    })
+    await this.tweetCollection.createIndex({ 'user._id': 1 })
   }
 }
 

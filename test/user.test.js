@@ -1,47 +1,34 @@
-/* eslint-env node, mocha */
 'use strict'
 
-const userPlugin = require('../user')
-
-const assert = require('assert')
+const t = require('tap')
 const MongoClient = require('mongodb').MongoClient
+
 const Fastify = require('fastify')
-const fp = require('fastify-plugin')
+const example = require('../index')
 
-const makeRequest = (fastify, options) => new Promise((resolve) => fastify.inject(options, resolve))
+const config = require('./config')
+const { registerUsers, login } = require('./test-util')
 
-const configuration = {
-  USER_MONGO_URL: 'mongodb://localhost/user',
-  JWT_SECRET: 'the secret'
-}
+t.test('user', async t => {
+  const mongoClient = await MongoClient.connect(config.MONGODB_URL, {useNewUrlParser: true})
+  await mongoClient.db('test').dropDatabase()
+  t.tearDown(() => mongoClient.close())
 
-let fastify
-describe('user', () => {
-  before('drop mongo', () => {
-    return MongoClient.connect(configuration.USER_MONGO_URL)
-      .then(mongoClient => {
-        mongoClient.unref()
-        return mongoClient.dropDatabase()
-      })
-  })
-  before('create fastify instance', (done) => {
-    fastify = Fastify({ level: 'silent' })
-    fastify.register(fp(userPlugin), configuration)
-    fastify.ready(done)
-  })
+  const fastify = Fastify({ logger: { level: 'silent' } })
+  fastify.register(example, config)
+  t.tearDown(() => fastify.close())
 
-  after('destroy fastify', done => {
-    if (!fastify) return done()
-    fastify.close(done)
-  })
+  t.plan(4)
 
-  it('registration + login', async () => {
+  t.test('registration + login + me', async t => {
+    t.plan(12)
+
     const USERNAME = 'the-user-1'
     const PASSWORD = 'the-password'
 
-    const regRes = await makeRequest(fastify, {
+    const regRes = await fastify.inject({
       method: 'POST',
-      url: '/register',
+      url: '/api/user/register',
       headers: {
         'Content-type': 'application/json'
       },
@@ -50,11 +37,12 @@ describe('user', () => {
         password: PASSWORD
       })
     })
-    assert.equal(200, regRes.statusCode)
+    t.equal(200, regRes.statusCode, regRes.payload)
+    const { userId } = JSON.parse(regRes.payload)
 
-    const loginRes = await makeRequest(fastify, {
+    const loginRes = await fastify.inject({
       method: 'POST',
-      url: '/login',
+      url: '/api/user/login',
       headers: {
         'Content-type': 'application/json'
       },
@@ -63,57 +51,95 @@ describe('user', () => {
         password: PASSWORD
       })
     })
-    assert.equal(200, loginRes.statusCode)
+    t.equal(200, loginRes.statusCode, loginRes.payload)
     const { jwt } = JSON.parse(loginRes.payload)
-    assert.ok(jwt)
 
-    const getMeRes = await makeRequest(fastify, {
+    const getMeRes = await fastify.inject({
       method: 'GET',
-      url: '/me',
+      url: '/api/user/me',
       headers: {
         'Content-type': 'application/json',
-        'Authorization': 'Baerer ' + jwt
+        'Authorization': 'Bearer ' + jwt
       }
     })
-    assert.equal(200, getMeRes.statusCode)
+    t.equal(200, getMeRes.statusCode, getMeRes.payload)
     const { username, password, _id } = JSON.parse(getMeRes.payload)
-    assert.equal(USERNAME, username)
-    assert.equal(undefined, password)
-    assert.ok(_id)
+
+    t.equal(USERNAME, username)
+    t.equal(undefined, password)
+    t.ok(_id)
+    t.equal(_id, userId)
+
+    const getUserRes = await fastify.inject({
+      method: 'GET',
+      url: '/api/user/' + userId,
+      headers: {
+        'Content-type': 'application/json',
+        'Authorization': 'Bearer ' + jwt
+      }
+    })
+    t.equal(200, getUserRes.statusCode, getUserRes.payload)
+    const { username: userUsername, password: userPassword, _id: userUserId } = JSON.parse(getUserRes.payload)
+
+    t.equal(USERNAME, userUsername)
+    t.equal(undefined, userPassword)
+    t.ok(userUserId)
+    t.equal(userUserId, userId)
   })
 
-  it('search', async () => {
+  t.test('search', async t => {
+    t.plan(11)
+
     const USERNAMES = [ 'user-foo-1', 'user-foo-2', 'user-foo-3', 'another-user' ]
+    await registerUsers(t, fastify, USERNAMES)
 
-    await Promise.all(USERNAMES.map(username => {
-      return makeRequest(fastify, {
-        method: 'POST',
-        url: '/register',
-        headers: {
-          'Content-type': 'application/json'
-        },
-        payload: JSON.stringify({
-          username: username,
-          password: 'the-password'
-        })
-      })
-        .then(res => {
-          assert.equal(200, res.statusCode, res.payload)
-        })
-    }))
+    const jwt = await login(t, fastify, 'user-foo-1')
 
-    const searchRes = await makeRequest(fastify, {
+    const searchRes = await fastify.inject({
       method: 'GET',
-      url: '/search?search=-foo-'
+      url: '/api/user/search?search=-foo-',
+      headers: {
+        'Authorization': 'Bearer ' + jwt
+      }
     })
-    assert.equal(200, searchRes.statusCode, searchRes.payload)
+    t.equal(200, searchRes.statusCode, searchRes.payload)
 
     const users = JSON.parse(searchRes.payload)
-    assert.equal(3, users.length)
+    t.equal(3, users.length)
 
-    assert.ok(users.find(u => u.username === USERNAMES[0]))
-    assert.ok(users.find(u => u.username === USERNAMES[1]))
-    assert.ok(users.find(u => u.username === USERNAMES[2]))
-    assert.ok(!users.find(u => u.username === USERNAMES[3]))
+    t.ok(users.find(u => u.username === USERNAMES[0]))
+    t.ok(users.find(u => u.username === USERNAMES[1]))
+    t.ok(users.find(u => u.username === USERNAMES[2]))
+    t.ok(!users.find(u => u.username === USERNAMES[3]))
+  })
+
+  t.test('duplicate username', async t => {
+    const USERNAMES = [ 'user-bar-1' ]
+    await registerUsers(t, fastify, USERNAMES)
+
+    const regRes = await fastify.inject({
+      method: 'POST',
+      url: '/api/user/register',
+      payload: {
+        username: USERNAMES[0],
+        password: 'my-password'
+      }
+    })
+    t.equal(regRes.statusCode, 412, regRes.payload)
+  })
+
+  t.test('wrong password', async t => {
+    const USERNAMES = [ 'user-pippo-1' ]
+    await registerUsers(t, fastify, USERNAMES)
+
+    const regRes = await fastify.inject({
+      method: 'POST',
+      url: '/api/user/login',
+      payload: {
+        username: USERNAMES[0],
+        password: 'the wrong password'
+      }
+    })
+    t.equal(regRes.statusCode, 412, regRes.payload)
   })
 })

@@ -1,100 +1,75 @@
-/* eslint-env node, mocha */
 'use strict'
 
-const tweetPlugin = require('../tweet')
+const t = require('tap')
+const MongoClient = require('mongodb').MongoClient
 
-const assert = require('assert')
-const nock = require('nock')
-const { MongoClient } = require('mongodb')
 const Fastify = require('fastify')
-const fp = require('fastify-plugin')
+const example = require('../index')
 
-const makeRequest = (fastify, options) => new Promise((resolve) => fastify.inject(options, resolve))
+const config = require('./config')
+const { registerUsers, login } = require('./test-util')
 
-const configuration = {
-  TWEET_MONGO_URL: 'mongodb://localhost/tweet'
-}
+t.test('tweet', async t => {
+  const mongoClient = await MongoClient.connect(config.MONGODB_URL, {useNewUrlParser: true})
+  await mongoClient.db('test').dropDatabase()
+  t.tearDown(() => mongoClient.close())
 
-let fastify
-describe('tweet', () => {
-  before('drop mongo', () => {
-    return MongoClient.connect(configuration.TWEET_MONGO_URL)
-      .then(mongoClient => {
-        mongoClient.unref()
-        return mongoClient.dropDatabase()
-      })
-  })
-  before('create fastify instance', (done) => {
-    fastify = Fastify({ logger: { level: 'silent' } })
-    fastify.register(fp(tweetPlugin), configuration)
-    fastify.ready(done)
-  })
-  before(() => nock.disableNetConnect())
-  after(() => nock.enableNetConnect())
+  const fastify = Fastify({ logger: { level: 'silent' } })
+  fastify.register(example, config)
+  t.tearDown(() => fastify.close())
 
-  after('destroy fastify', done => {
-    if (!fastify) return done()
-    fastify.close(done)
-  })
+  t.plan(1)
 
-  it('add a tweet + get tweets', async () => {
-    const USER_ID = '59cfce2748c1f7eb59490b0a'
+  t.test('add a tweet + get tweets', async t => {
+    t.plan(12)
+
     const USERNAME = 'the-user-1'
+
+    await registerUsers(t, fastify, [USERNAME])
+    const jwt = await login(t, fastify, USERNAME)
+
     const TWEET_TEXT = 'the tweet text!'
-    const JSON_WEB_TOKEN = 'the-json-web-token'
 
-    const getMeNockScope = nock('http://localhost:3001')
-      .replyContentLength()
-      .get('/api/user/me')
-      .times(3)
-      .reply(200, {
-        _id: USER_ID,
-        username: USERNAME
-      })
-
-    let res = await makeRequest(fastify, {
+    let res = await fastify.inject({
       method: 'POST',
-      url: '/',
+      url: '/api/tweet',
       headers: {
         'Content-type': 'application/json',
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       },
-      payload: JSON.stringify({
+      payload: {
         text: TWEET_TEXT
-      })
-    })
-    assert.equal(res.statusCode, 204, res.payload)
-
-    res = await makeRequest(fastify, {
-      method: 'GET',
-      url: '/',
-      headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
       }
     })
-    assert.equal(res.statusCode, 200, res.payload)
+    t.equal(res.statusCode, 204, res.payload)
+
+    res = await fastify.inject({
+      method: 'GET',
+      url: '/api/tweet',
+      headers: {
+        'Authorization': 'Bearer ' + jwt
+      }
+    })
+    t.equal(res.statusCode, 200, res.payload)
 
     const myTweetBody = JSON.parse(res.payload)
 
-    assert.equal(myTweetBody.length, 1, res.payload)
-    assert.ok(myTweetBody[0]._id)
-    assert.deepEqual(myTweetBody[0].user, {
-      _id: USER_ID,
-      username: USERNAME
-    })
-    assert.deepEqual(myTweetBody[0].text, TWEET_TEXT)
+    t.equal(myTweetBody.length, 1, res.payload)
+    t.ok(myTweetBody[0]._id)
+    t.ok(myTweetBody[0].user)
+    t.ok(myTweetBody[0].user._id)
+    t.deepEqual(myTweetBody[0].user.username, USERNAME)
+    t.deepEqual(myTweetBody[0].text, TWEET_TEXT)
 
-    res = await makeRequest(fastify, {
+    res = await fastify.inject({
       method: 'GET',
-      url: '/' + USER_ID,
+      url: '/api/tweet/' + myTweetBody[0].user._id,
       headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       }
     })
-    assert.equal(res.statusCode, 200, res.payload)
+    t.equal(res.statusCode, 200, res.payload)
     const userTweetBody = JSON.parse(res.payload)
-    assert.deepEqual(userTweetBody, myTweetBody)
-
-    getMeNockScope.done()
+    t.deepEqual(userTweetBody, myTweetBody)
   })
 })

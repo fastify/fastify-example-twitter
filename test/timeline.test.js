@@ -1,99 +1,77 @@
-/* eslint-env node, mocha */
 'use strict'
 
-const timelinePlugin = require('../timeline')
-
-const assert = require('assert')
-const nock = require('nock')
+const t = require('tap')
 const MongoClient = require('mongodb').MongoClient
+
 const Fastify = require('fastify')
+const example = require('../index')
 
-const makeRequest = (fastify, options) => new Promise((resolve) => fastify.inject(options, resolve))
+const config = require('./config')
+const { registerUsers, login, createTweet, follow } = require('./test-util')
 
-const configuration = {
-  TWEET_MONGO_URL: 'mongodb://localhost/tweet'
-}
+t.test('user', async t => {
+  const mongoClient = await MongoClient.connect(config.MONGODB_URL, {useNewUrlParser: true})
+  await mongoClient.db('test').dropDatabase()
+  t.tearDown(() => mongoClient.close())
 
-let fastify
-describe('timeline', () => {
-  before('drop mongo', () => {
-    return MongoClient.connect(configuration.TWEET_MONGO_URL)
-      .then(mongoClient => {
-        mongoClient.unref()
-        return mongoClient.dropDatabase()
-      })
-  })
-  before('create fastify instance', (done) => {
-    fastify = Fastify({ level: 'silent' })
-    fastify.register(timelinePlugin, configuration)
-    fastify.ready(done)
-  })
-  before(() => nock.disableNetConnect())
-  after(() => nock.enableNetConnect())
+  const fastify = Fastify({ logger: { level: 'silent' } })
+  fastify.register(example, config)
+  t.tearDown(() => fastify.close())
 
-  after('destroy fastify', done => {
-    if (!fastify) return done()
-    fastify.close(done)
-  })
+  t.plan(1)
 
-  it('get timeline', async () => {
-    const USER_ID = 'the-user-id'
-    const USERNAME = 'the-user-1'
-    const JSON_WEB_TOKEN = 'the-json-web-token'
+  t.test('get timeline', async t => {
+    t.plan(15)
 
-    const USER_ID_1 = 'the-user-id-1'
-    const USER_ID_2 = 'the-user-id-2'
-    const USER_ID_3 = 'the-user-id-3'
+    const [
+      {userId: meUserId},
+      {userId: friend1UserId},
+      {userId: friend2UserId}
+    ] = await registerUsers(t, fastify, [
+      'my-username',
+      'friend1-username',
+      'friend2-username'
+    ])
+    const meJWT = await login(t, fastify, 'my-username')
+    const fiend1JWT = await login(t, fastify, 'friend1-username')
+    const fiend2JWT = await login(t, fastify, 'friend2-username')
+    await createTweet(t, fastify, meJWT, 'tweet user id 1')
+    await createTweet(t, fastify, fiend1JWT, 'tweet user id 2')
+    await createTweet(t, fastify, fiend2JWT, 'tweet user id 3')
+    await createTweet(t, fastify, meJWT, 'another tweet user id 1')
 
-    const followingTweets = [
-      {
-        text: 'tweet user id 1',
-        user: { _id: USER_ID_1 }
-      },
-      {
-        text: 'tweet user id 2',
-        user: { _id: USER_ID_2 }
-      },
-      {
-        text: 'tweet user id 3',
-        user: { _id: USER_ID_3 }
-      },
-      {
-        text: ' another tweet user id 1',
-        user: { _id: USER_ID_1 }
-      }
-    ]
+    await follow(t, fastify, meJWT, friend1UserId)
+    await follow(t, fastify, meJWT, friend2UserId)
 
-    const getMeNockScope = nock('http://localhost:3001')
-      .replyContentLength()
-      .get('/api/user/me')
-      .reply(200, {
-        _id: USER_ID,
-        username: USERNAME
-      })
-      .get('/api/follow/following/' + USER_ID)
-      .reply(200, [
-        USER_ID_1,
-        USER_ID_2,
-        USER_ID_3
-      ])
-      .get('/api/tweet/' + [ USER_ID_1, USER_ID_2, USER_ID_3, USER_ID ].join(','))
-      .reply(200, followingTweets)
-
-    const res = await makeRequest(fastify, {
+    const res = await fastify.inject({
       method: 'GET',
-      url: '/',
+      url: '/api/timeline',
       headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + meJWT
       }
     })
-    assert.equal(200, res.statusCode, res.payload)
+    t.equal(200, res.statusCode, res.payload)
 
     const body = JSON.parse(res.payload)
 
-    assert.equal(body.length, 4, res.payload)
-    assert.deepEqual(body, followingTweets)
-
-    getMeNockScope.done()
+    t.equal(body.length, 4, res.payload)
+    t.deepEqual(body.map(t => ({userId: t.user._id, text: t.text})), [
+      {
+        userId: meUserId,
+        text: 'another tweet user id 1'
+      },
+      {
+        userId: friend2UserId,
+        text: 'tweet user id 3'
+      },
+      {
+        userId: friend1UserId,
+        text: 'tweet user id 2'
+      },
+      {
+        userId: meUserId,
+        text: 'tweet user id 1'
+      }
+    ])
   })
 })

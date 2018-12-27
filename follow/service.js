@@ -38,19 +38,19 @@ class FollowService {
   }
 
   follow (meId, otherId) {
-    return follow(this.redisClient, meId, otherId)
+    return follow(this.redisClient, meId + '', otherId + '')
   }
 
   unfollow (meId, otherId) {
-    return unfollow(this.redisClient, meId, otherId)
+    return unfollow(this.redisClient, meId + '', otherId + '')
   }
 
   getFollowing (meId) {
-    return getFollowing(this.redisClient, meId)
+    return getFollowing(this.redisClient, meId + '')
   }
 
   getFollowers (otherId) {
-    return getFollowers(this.redisClient, otherId)
+    return getFollowers(this.redisClient, otherId + '')
   }
 }
 

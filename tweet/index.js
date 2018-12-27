@@ -1,80 +1,40 @@
 'use strict'
 
-const fp = require('fastify-plugin')
-
 const {
   tweet: tweetSchema,
-  getTweets: getTweetsSchema
+  getTweets: getTweetsSchema,
+  getUserTweets: getUserTweetsSchema
 } = require('./schemas')
-const TweetService = require('./TweetService')
 
 module.exports = async function (fastify, opts) {
-  // See user/index.js for some little explainations
-  fastify.register(require('fastify-env'), {
-    schema: {
-      type: 'object',
-      required: [ 'TWEET_MONGO_URL', 'USER_MICROSERVICE_BASE_URL' ],
-      properties: {
-        TWEET_MONGO_URL: { type: 'string', default: 'mongodb://localhost/tweet' },
-        USER_MICROSERVICE_BASE_URL: { type: 'string', default: 'http://localhost:3001' }
-      }
-    },
-    data: opts
-  })
+  // All APIs are under authentication here!
+  fastify.addHook('preHandler', fastify.authPreHandler)
 
-  fastify.register(async function (fastify, opts) {
-    fastify.register(require('fastify-mongodb'), {
-      url: fastify.config.TWEET_MONGO_URL
-    })
-
-    fastify.register(fp(async function decorateWithTweetCollection (fastify, opts) {
-      fastify.decorate('tweetCollection', fastify.mongo.db.collection('tweets'))
-    }))
-
-    fastify.register(async function (fastify, opts) {
-      require('./mongoCollectionSetup')(fastify.mongo.db, fastify.tweetCollection)
-    })
-
-    fastify.register(fp(async function decorateWithTweetService (fastify, opts) {
-      const tweetService = new TweetService(fastify.tweetCollection)
-      fastify.decorate('tweetService', tweetService)
-    }))
-
-    fastify.register(require('../userClient'), fastify.config)
-
-    fastify.register(registerRoutes)
-  })
+  fastify.post('/', { schema: tweetSchema }, addTwitterHandler)
+  fastify.get('/', { schema: getTweetsSchema }, getTwitterHandler)
+  fastify.get('/:userIds', { schema: getUserTweetsSchema }, getUserTweetsHandler)
 }
 
-async function registerRoutes (fastify, opts) {
-  const { tweetService, userClient } = fastify
-  const { ObjectId } = fastify.mongo
+module.exports[Symbol.for('plugin-meta')] = {
+  decorators: {
+    fastify: [
+      'authPreHandler',
+      'tweetService'
+    ]
+  }
+}
 
-  fastify.addHook('preHandler', async function (req, reply) {
-    try {
-      req.user = await userClient.getMe(req)
-      req.user._id = ObjectId.createFromHexString(req.user._id)
-    } catch (e) {
-      if (!reply.context.config.allowUnlogged) {
-        throw e
-      }
-    }
-  })
+async function addTwitterHandler (req, reply) {
+  const { text } = req.body
+  await this.tweetService.addTweet(req.user, text)
+  reply.code(204)
+}
 
-  fastify.post('/', tweetSchema, async function (req, reply) {
-    const { text } = req.body
-    await tweetService.addTweet(req.user, text)
-    reply.code(204)
-  })
+async function getTwitterHandler (req, reply) {
+  return this.tweetService.fetchTweets([req.user._id])
+}
 
-  fastify.get('/', async function (req, reply) {
-    const tweets = await tweetService.fetchTweets([req.user._id])
-    return tweets
-  })
-
-  fastify.get('/:userIds', getTweetsSchema, async function (req, reply) {
-    const userIds = req.params.userIds.split(',').map(id => ObjectId.createFromHexString(id))
-    const tweets = await tweetService.fetchTweets(userIds)
-    return tweets
-  })
+async function getUserTweetsHandler (req, reply) {
+  const userIds = req.params.userIds.split(',')
+  return this.tweetService.fetchTweets(userIds)
 }

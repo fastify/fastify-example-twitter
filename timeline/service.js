@@ -7,10 +7,9 @@ class TimelineService {
   }
 
   async getTimeline (userId) {
-    const followings = await this.followClient.getMyFollowing(userId)
-    followings.push(userId.toString())
-    const tweets = await this.tweetClient.getTweets(followings)
-    return tweets
+    const followerIds = await this.followClient.getFollowing(userId)
+    followerIds.push(userId)
+    return this.tweetClient.fetchTweets(followerIds)
   }
 }
 

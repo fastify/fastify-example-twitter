@@ -57,8 +57,9 @@ function user (state = USER_INITIAL_STATE, action) {
       localStorage.removeItem('jwt')
       delete axios.defaults.headers.common['Authorization']
       return { ...state, isFetching: false, error: null, jwt: null }
+    default:
+      return state
   }
-  return state
 }
 
 const TWEETS_INITIAL_STATE = { isFetching: false, tweets: [], error: null }
@@ -70,8 +71,9 @@ function tweets (state = TWEETS_INITIAL_STATE, action) {
       return { ...state, isFetching: false, tweets: action.tweets }
     case TWEETS_FAILD:
       return { ...state, isFetching: false, error: action.error }
+    default:
+      return state
   }
-  return state
 }
 
 const SEARCH_INITIAL_STATE = { users: [] }
@@ -81,8 +83,9 @@ function search (state = SEARCH_INITIAL_STATE, action) {
       return { ...state, users: action.users }
     case SEARCH_FAILED:
       return { ...state, users: [] }
+    default:
+      return state
   }
-  return state
 }
 
 const MY_FOLLOWING_INITIAL_STATE = { users: [] }
@@ -90,8 +93,9 @@ function myFollowing (state = MY_FOLLOWING_INITIAL_STATE, action) {
   switch (action.type) {
     case MY_FOLLOWING_SUCCESS:
       return { ...state, users: action.users }
+    default:
+      return state
   }
-  return state
 }
 
 const USER_TWEET_INITIAL_STATE = { }
@@ -99,8 +103,9 @@ function userTweet (state = USER_TWEET_INITIAL_STATE, action) {
   switch (action.type) {
     case USER_TWEET_SUCCESS:
       return { ...state, [action.userId]: action.tweets }
+    default:
+      return state
   }
-  return state
 }
 
 const USERS_INIT_STATE = {}
@@ -108,8 +113,9 @@ function users (state = USERS_INIT_STATE, action) {
   switch (action.type) {
     case USER_SUCCESS:
       return { ...state, [action._id]: { username: action.username } }
+    default:
+      return state
   }
-  return state
 }
 
 const FOLLOWER_INIT_STATE = {}
@@ -117,8 +123,9 @@ function follower (state = FOLLOWER_INIT_STATE, action) {
   switch (action.type) {
     case FOLLOWER_SUCCESS:
       return { ...state, [action.userId]: action.followers }
+    default:
+      return state
   }
-  return state
 }
 
 const FOLLOWING_INIT_STATE = {}
@@ -126,8 +133,9 @@ function following (state = FOLLOWING_INIT_STATE, action) {
   switch (action.type) {
     case FOLLOWING_SUCCESS:
       return { ...state, [action.userId]: action.following }
+    default:
+      return state
   }
-  return state
 }
 
 export default {
