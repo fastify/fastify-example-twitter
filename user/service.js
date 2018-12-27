@@ -20,8 +20,6 @@ class UserService {
       throw e
     }
 
-    if (writeResult.insertedCount !== 1) throw new Error('unknown error')
-
     return writeResult.insertedId
   }
 

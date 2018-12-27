@@ -24,10 +24,7 @@
     "fastify-plugin": "^0.2.2",
     "fastify-redis": "^0.4.0",
     "fastify-static": "^0.8.0",
-    "fastify-swagger": "^0.3.2",
-    "fastseries": "^1.7.2",
-    "got": "^7.1.0",
-    "simple-get": "^3.0.3"
+    "fastify-swagger": "^0.3.2"
   },
   "devDependencies": {
     "mongodb": "^3.1.0",

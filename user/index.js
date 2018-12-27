@@ -7,6 +7,8 @@ const {
   getProfile: getProfileSchema
 } = require('./schemas')
 
+const errors = require('../errors')
+
 module.exports = async function (fastify, opts) {
   // Route registration
   // fastify.<method>(<path>, <schema>, <handler>)
@@ -22,6 +24,14 @@ module.exports = async function (fastify, opts) {
     fastify.get('/me', meHandler)
     fastify.get('/:userId', { schema: getProfileSchema }, userHandler)
     fastify.get('/search', { schema: searchSchema }, searchHandler)
+  })
+
+  fastify.setErrorHandler(function (error, request, reply) {
+    const message = error.message
+    if (errors[message]) {
+      reply.code(412)
+    }
+    reply.send(error)
   })
 }
 
