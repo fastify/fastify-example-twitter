@@ -1,77 +1,53 @@
-/* eslint-env node, mocha */
 'use strict'
 
-const tweetPlugin = require('../tweet')
-
-const nock = require('nock')
-const { MongoClient, ObjectId } = require('mongodb')
-const Fastify = require('fastify')
-const fp = require('fastify-plugin')
-
 const t = require('tap')
+const MongoClient = require('mongodb').MongoClient
 
-const MONGODB_URL = 'mongodb://localhost/test'
+const Fastify = require('fastify')
+const example = require('../index')
 
-const USER_ID = new ObjectId('59cfce2748c1f7eb59490b0a')
-
-let userPrehandler = []
-async function injectUser (fastify) {
-  fastify.addHook('preHandler', async function (req, reply) {
-    req.user = userPrehandler.shift()
-  })
-  fastify.decorate('transformStringIntoObjectId', fastify.mongo.ObjectId)
-}
+const config = require('./config')
+const { registerUsers, login } = require('./test-util')
 
 t.test('tweet', async t => {
-  const mongoClient = await MongoClient.connect(MONGODB_URL)
+  const mongoClient = await MongoClient.connect(config.MONGODB_URL, {useNewUrlParser: true})
   await mongoClient.db('test').dropDatabase()
   t.tearDown(() => mongoClient.close())
 
   const fastify = Fastify({ logger: { level: 'silent' } })
-  fastify
-    .register(require('fastify-mongodb'), { url: MONGODB_URL })
-    .register(fp(injectUser))
-    .register(tweetPlugin)
+  fastify.register(example, config)
   t.tearDown(() => fastify.close())
-
-  nock.disableNetConnect()
-  t.tearDown(() => nock.enableNetConnect())
 
   t.plan(1)
 
   t.test('add a tweet + get tweets', async t => {
-    t.plan(9)
+    t.plan(12)
 
     const USERNAME = 'the-user-1'
-    const TWEET_TEXT = 'the tweet text!'
-    const JSON_WEB_TOKEN = 'the-json-web-token'
 
-    // userPrehandler is used to mock the `/me` request
-    // I don't like this! If you ate it please PR!!
-    userPrehandler = [
-      { _id: USER_ID, username: USERNAME },
-      { _id: USER_ID, username: USERNAME },
-      { _id: USER_ID, username: USERNAME }
-    ]
+    await registerUsers(t, fastify, [USERNAME])
+    const jwt = await login(t, fastify, USERNAME)
+
+    const TWEET_TEXT = 'the tweet text!'
 
     let res = await fastify.inject({
       method: 'POST',
-      url: '/',
+      url: '/api/tweet',
       headers: {
         'Content-type': 'application/json',
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       },
-      payload: JSON.stringify({
+      payload: {
         text: TWEET_TEXT
-      })
+      }
     })
     t.equal(res.statusCode, 204, res.payload)
 
     res = await fastify.inject({
       method: 'GET',
-      url: '/',
+      url: '/api/tweet',
       headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       }
     })
     t.equal(res.statusCode, 200, res.payload)
@@ -80,23 +56,20 @@ t.test('tweet', async t => {
 
     t.equal(myTweetBody.length, 1, res.payload)
     t.ok(myTweetBody[0]._id)
-    t.deepEqual(myTweetBody[0].user, {
-      _id: USER_ID + '',
-      username: USERNAME
-    })
+    t.ok(myTweetBody[0].user)
+    t.ok(myTweetBody[0].user._id)
+    t.deepEqual(myTweetBody[0].user.username, USERNAME)
     t.deepEqual(myTweetBody[0].text, TWEET_TEXT)
 
     res = await fastify.inject({
       method: 'GET',
-      url: '/' + USER_ID,
+      url: '/api/tweet/' + myTweetBody[0].user._id,
       headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       }
     })
     t.equal(res.statusCode, 200, res.payload)
     const userTweetBody = JSON.parse(res.payload)
     t.deepEqual(userTweetBody, myTweetBody)
-
-    t.equal(userPrehandler.length, 0)
   })
 })

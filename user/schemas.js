@@ -1,7 +1,5 @@
 'use strict'
 
-// This file contains the fastify input and output schema
-
 const userProfileOutput = {
   type: 'object',
   require: [ '_id', 'username' ],
@@ -12,96 +10,86 @@ const userProfileOutput = {
 }
 
 const registration = {
-  schema: {
-    schema: {
-      // This jsonschema will be used for data validation
-      body: {
-        type: 'object',
-        required: [ 'username', 'password' ],
-        properties: {
-          username: {
-            type: 'string'
-          },
-          password: {
-            type: 'string'
-          }
-        },
-        additionalProperties: false
+  // This jsonschema will be used for data validation
+  body: {
+    type: 'object',
+    required: [ 'username', 'password' ],
+    properties: {
+      username: {
+        type: 'string'
       },
-      response: {
-        // The 200 body response is described
-        // by the following schema
-        200: {
-          type: 'object',
-          required: [ 'userId' ],
-          properties: {
-            userId: { type: 'string' }
-          },
-          additionalProperties: false
-        }
+      password: {
+        type: 'string'
       }
+    },
+    additionalProperties: false
+  },
+  response: {
+    // The 200 body response is described
+    // by the following schema
+    200: {
+      type: 'object',
+      required: [ 'userId' ],
+      properties: {
+        userId: { type: 'string' }
+      },
+      additionalProperties: false
     }
   }
 }
 
 const login = {
-  schema: {
-    body: {
+  body: {
+    type: 'object',
+    require: [ 'username', 'password' ],
+    properties: {
+      username: { type: 'string' },
+      password: { type: 'string' }
+    },
+    additionalProperties: false
+  },
+  response: {
+    200: {
       type: 'object',
-      require: [ 'username', 'password' ],
+      require: [ 'jwt' ],
       properties: {
-        username: { type: 'string' },
-        password: { type: 'string' }
+        jwt: { type: 'string' }
       },
       additionalProperties: false
-    },
-    response: {
-      200: {
-        type: 'object',
-        require: [ 'jwt' ],
-        properties: {
-          jwt: { type: 'string' }
-        },
-        additionalProperties: false
-      }
     }
   }
 }
 
 const search = {
-  schema: {
-    querystring: {
-      type: 'object',
-      require: [ 'search' ],
-      properties: {
-        search: { type: 'string' }
-      },
-      additionalProperties: false
+  querystring: {
+    type: 'object',
+    require: [ 'search' ],
+    properties: {
+      search: { type: 'string' }
     },
-    response: {
-      200: {
-        type: 'array',
-        items: userProfileOutput
-      }
+    additionalProperties: false
+  },
+  response: {
+    200: {
+      type: 'array',
+      items: userProfileOutput
     }
   }
 }
 
 const getProfile = {
-  schema: {
-    params: {
-      type: 'object',
-      required: ['userId'],
-      properties: {
-        userId: {
-          type: 'string',
-          pattern: '^[0-9a-fA-F]{24}'
-        }
+  params: {
+    type: 'object',
+    required: ['userId'],
+    properties: {
+      userId: {
+        type: 'string',
+        pattern: '^[0-9a-fA-F]{24}'
       }
-    },
-    response: {
-      200: userProfileOutput
     }
+  },
+  response: {
+    200: userProfileOutput
   }
 }
 

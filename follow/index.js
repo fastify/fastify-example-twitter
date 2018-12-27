@@ -1,40 +1,31 @@
 'use strict'
 
-const fp = require('fastify-plugin')
-
 const {
   follow: followSchema,
   unfollow: unfollowSchema,
   followers: followersSchema
 } = require('./schemas')
-const FollowService = require('./service')
 
-const FollowClient = require('./client')
+module.exports = async function (fastify, opts) {
+  fastify.addHook('preHandler', fastify.authPreHandler)
 
-// See users/index.js for more explainations!
-module.exports = fp(async function (fastify, opts) {
-  const followService = new FollowService(fastify.redis)
+  fastify
+    .post('/follow', followSchema, followHandler)
+    .post('/unfollow', unfollowSchema, unfollowHandler)
+    .get('/following/me', getMyFollowingHandler)
+    .get('/followers/me', getMyFollowersHandler)
+    .get('/following/:userId', getUserFollowingHandler)
+    .get('/followers/:userId', followersSchema, getUserFollowersHandler)
+}
 
-  fastify.decorate('followClient', new FollowClient(followService))
-
-  fastify.register(async function (fastify) {
-    fastify.decorate('followService', followService)
-
-    fastify
-      .post('/follow', followSchema, followHandler)
-      .post('/unfollow', unfollowSchema, unfollowHandler)
-      .get('/following/me', getMyFollowingHandler)
-      .get('/followers/me', getMyFollowersHandler)
-      .get('/following/:userId', { config: { allowUnlogged: true } }, getUserFollowingHandler)
-      .get('/followers/:userId', followersSchema, getUserFollowersHandler)
-  }, { prefix: opts.prefix })
-}, {
+module.exports[Symbol.for('plugin-meta')] = {
   decorators: {
     fastify: [
-      'redis'
+      'redis',
+      'authPreHandler'
     ]
   }
-})
+}
 
 async function followHandler (req, reply) {
   const { userId } = req.body

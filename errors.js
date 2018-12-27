@@ -1,0 +1,6 @@
+'use strict'
+
+module.exports = {
+  'USERNAME_IS_NOT_AVAILABLE': 'USERNAME_IS_NOT_AVAILABLE',
+  'WRONG_CREDENTIAL': 'WRONG_CREDENTIAL'
+}

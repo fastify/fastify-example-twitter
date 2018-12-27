@@ -3,6 +3,11 @@
 const path = require('path')
 const fp = require('fastify-plugin')
 
+const UserService = require('./user/service')
+const TweetService = require('./tweet/service')
+const FollowService = require('./follow/service')
+const TimelineService = require('./timeline/service')
+
 const swaggerOption = {
   swagger: {
     info: {
@@ -32,7 +37,7 @@ async function connectToDatabases (fastify) {
   fastify
     // `fastify-mongodb` makes this connection and store the database instance into `fastify.mongo.db`
     // See https://github.com/fastify/fastify-mongodb
-    .register(require('fastify-mongodb'), { url: fastify.config.MONGODB_URL })
+    .register(require('fastify-mongodb'), { url: fastify.config.MONGODB_URL, useNewUrlParser: true })
     // `fastify-redis` makes this connection and store the database instance into `fastify.redis`
     // See https://github.com/fastify/fastify-redis
     .register(require('fastify-redis'), { url: fastify.config.REDIS_URL })
@@ -48,67 +53,55 @@ async function authenticator (fastify) {
     })
 }
 
+function transformStringIntoObjectId (str) {
+  return new this.mongo.ObjectId(str)
+}
+
 async function decorateFastifyInstance (fastify) {
-  fastify
-    .decorate('getUserIdFromRequest', function (req) {
-      const jwt = (req.req.headers.authorization || '').substr(7)
-      const decoded = this.jwt.decode(jwt)
-      return decoded._id
-    })
-    .decorate('getAuthenticationTokenForUser', function (user) {
-      return this.jwt.sign(user)
-    })
-    // This decoration is only a short cut
-    .decorate('transformStringIntoObjectId', fastify.mongo.ObjectId.createFromHexString)
-}
+  const db = fastify.mongo.db
 
-// This preHandler hook injects the user inside the request object
-async function preHandler (req, reply) {
-  try {
-    const userIdString = this.getUserIdFromRequest(req)
-    const userId = this.transformStringIntoObjectId(userIdString)
-    req.user = await this.userClient.getMe(userId)
-  } catch (e) {
-    // This is a trick:
-    // reply.context.config is an object set during the route registration
-    // See https://github.com/fastify/fastify/blob/master/docs/Routes.md#full-declaration
-    if (!reply.context.config.allowUnlogged) {
-      throw e
+  const userCollection = await db.createCollection('users')
+  const userService = new UserService(userCollection)
+  await userService.ensureIndexes(db)
+  fastify.decorate('userService', userService)
+
+  const tweetCollection = await db.createCollection('tweets')
+  const tweetService = new TweetService(tweetCollection)
+  await tweetService.ensureIndexes(db)
+  fastify.decorate('tweetService', tweetService)
+
+  const followService = new FollowService(fastify.redis)
+  fastify.decorate('followService', followService)
+
+  const timelineService = new TimelineService(followService, tweetService)
+  fastify.decorate('timelineService', timelineService)
+
+  fastify.decorate('authPreHandler', async function auth (request, reply) {
+    try {
+      await request.jwtVerify()
+    } catch (err) {
+      reply.send(err)
     }
-  }
+  })
+
+  fastify.decorate('transformStringIntoObjectId', transformStringIntoObjectId)
 }
-
-// This plugin register all other plugin.
-// This allow us to group logically the routes
-// All the registered module here has a preHandler hook!
-const protectedModules = fp(async function protectedModules (fastify) {
-  fastify.addHook('preHandler', preHandler)
-
-  fastify
-    .register(require('./tweet'), { prefix: '/api/tweet' })
-    .register(require('./follow'), { prefix: '/api/follow' })
-    .register(require('./timeline'), { prefix: '/api/timeline' })
-}, {
-  decorators: {
-    fastify: [
-      'getUserIdFromRequest',
-      'transformStringIntoObjectId',
-      'userClient'
-    ]
-  }
-})
 
 module.exports = async function (fastify, opts) {
   fastify
     .register(require('fastify-swagger'), swaggerOption)
     // fastify-env checks and coerces the environment variables and save the result in `fastify.config`
     // See https://github.com/fastify/fastify-env
-    .register(require('fastify-env'), { schema, data: [ process.env, opts ], env: false })
+    .register(require('fastify-env'), { schema, data: [ opts ] })
     .register(fp(connectToDatabases))
     .register(fp(authenticator))
     .register(fp(decorateFastifyInstance))
+    // APIs modules
     .register(require('./user'), { prefix: '/api/user' })
-    .register(protectedModules)
+    .register(require('./tweet'), { prefix: '/api/tweet' })
+    .register(require('./follow'), { prefix: '/api/follow' })
+    .register(require('./timeline'), { prefix: '/api/timeline' })
+    // Serving static files
     .register(require('fastify-static'), {
       root: path.join(__dirname, 'frontend', 'build'),
       prefix: '/'

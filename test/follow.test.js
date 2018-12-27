@@ -1,132 +1,101 @@
-/* eslint-env node, mocha */
 'use strict'
 
-const followPlugin = require('../follow')
-
-const util = require('util')
-const nock = require('nock')
-const redis = require('redis')
-const client = redis.createClient()
-const Fastify = require('fastify')
-const fp = require('fastify-plugin')
-
 const t = require('tap')
+const MongoClient = require('mongodb').MongoClient
 
-let userPrehandler = []
-const USER_ID = 'the-user-id'
+const Fastify = require('fastify')
+const example = require('../index')
 
-async function injectUser (fastify) {
-  fastify.addHook('preHandler', async function (req, reply) {
-    req.user = userPrehandler.shift()
-  })
-}
-
-const REDIS_URL = 'redis://localhost:6379'
+const config = require('./config')
+const { registerUsers, login } = require('./test-util')
 
 t.test('follow', async t => {
-  await util.promisify(client.flushall).call(client)
-  t.tearDown(done => client.end(done))
-
-  nock.disableNetConnect()
-  t.tearDown(() => nock.enableNetConnect())
+  const mongoClient = await MongoClient.connect(config.MONGODB_URL, {useNewUrlParser: true})
+  await mongoClient.db('test').dropDatabase()
+  t.tearDown(() => mongoClient.close())
 
   const fastify = Fastify({ logger: { level: 'silent' } })
-  fastify
-    .register(require('fastify-redis'), { url: REDIS_URL })
-    .register(fp(injectUser))
-    .register(followPlugin)
+  fastify.register(example, config)
   t.tearDown(() => fastify.close())
 
   t.plan(1)
 
   t.test('follow + gets + unfollow + gets', async t => {
-    t.plan(11)
-    const USERNAME = 'the-user-1'
-    const JSON_WEB_TOKEN = 'the-json-web-token'
+    t.plan(13)
 
-    const OTHER_USER_ID = '1111'
+    const ME_USERNAME = 'me-username'
+    const FRIEND_USERNAME = 'friend-username'
 
-    userPrehandler = [
-      { _id: USER_ID, username: USERNAME },
-      { _id: USER_ID, username: USERNAME },
-      { _id: USER_ID, username: USERNAME },
-      { _id: USER_ID, username: USERNAME },
-      { _id: USER_ID, username: USERNAME },
-      { _id: USER_ID, username: USERNAME }
-    ]
+    const [ { userId: meUserId }, { userId: friendUserId } ] = await registerUsers(t, fastify, [ME_USERNAME, FRIEND_USERNAME])
+    const jwt = await login(t, fastify, ME_USERNAME)
 
-    let res, body
-
-    res = await fastify.inject({
+    const followMyFriendResponse = await fastify.inject({
       method: 'POST',
-      url: '/follow',
+      url: '/api/follow/follow',
+      headers: {
+        'Authorization': 'Bearer ' + jwt
+      },
+      payload: {
+        userId: friendUserId
+      }
+    })
+    t.equal(204, followMyFriendResponse.statusCode, followMyFriendResponse.payload)
+
+    const getWhoIFollowResponse = await fastify.inject({
+      method: 'GET',
+      url: '/api/follow/following/me',
+      headers: {
+        'Authorization': 'Bearer ' + jwt
+      }
+    })
+    t.equal(200, getWhoIFollowResponse.statusCode, getWhoIFollowResponse.payload)
+    const getWhoIFollowBody = JSON.parse(getWhoIFollowResponse.payload)
+    t.deepEqual(getWhoIFollowBody, [friendUserId])
+
+    const getFriendFollowersResponse = await fastify.inject({
+      method: 'GET',
+      url: `/api/follow/followers/${friendUserId}`,
+      headers: {
+        'Authorization': 'Bearer ' + jwt
+      }
+    })
+    t.equal(200, getFriendFollowersResponse.statusCode, getFriendFollowersResponse.payload)
+    const getFriendFollowersBody = JSON.parse(getFriendFollowersResponse.payload)
+    t.deepEqual(getFriendFollowersBody, [meUserId])
+
+    const unfollowResponse = await fastify.inject({
+      method: 'POST',
+      url: '/api/follow/unfollow',
       headers: {
         'Content-type': 'application/json',
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       },
       payload: JSON.stringify({
-        userId: OTHER_USER_ID
+        userId: friendUserId
       })
     })
-    t.equal(204, res.statusCode, res.payload)
+    t.equal(204, unfollowResponse.statusCode, unfollowResponse.payload)
 
-    res = await fastify.inject({
+    const getWhoIFollowResponse2 = await fastify.inject({
       method: 'GET',
-      url: '/following/me',
+      url: '/api/follow/following/me',
       headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       }
     })
-    t.equal(200, res.statusCode, res.payload)
-    body = JSON.parse(res.payload)
-    t.deepEqual(body, [OTHER_USER_ID])
+    t.equal(200, getWhoIFollowResponse2.statusCode, getWhoIFollowResponse2.payload)
+    const getWhoIFollowBody2 = JSON.parse(getWhoIFollowResponse2.payload)
+    t.deepEqual(getWhoIFollowBody2, [])
 
-    res = await fastify.inject({
+    const getFriendFollowersResponse2 = await fastify.inject({
       method: 'GET',
-      url: `/followers/${OTHER_USER_ID}`,
+      url: `/api/follow/followers/${friendUserId}`,
       headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + jwt
       }
     })
-    t.equal(200, res.statusCode, res.payload)
-    body = JSON.parse(res.payload)
-    t.deepEqual(body, [USER_ID])
-
-    res = await fastify.inject({
-      method: 'POST',
-      url: '/unfollow',
-      headers: {
-        'Content-type': 'application/json',
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
-      },
-      payload: JSON.stringify({
-        userId: OTHER_USER_ID
-      })
-    })
-    t.equal(204, res.statusCode, res.payload)
-
-    res = await fastify.inject({
-      method: 'GET',
-      url: '/following/me',
-      headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
-      }
-    })
-    t.equal(200, res.statusCode, res.payload)
-    body = JSON.parse(res.payload)
-    t.deepEqual(body, [])
-
-    res = await fastify.inject({
-      method: 'GET',
-      url: `/followers/${OTHER_USER_ID}`,
-      headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
-      }
-    })
-    t.equal(200, res.statusCode, res.payload)
-    body = JSON.parse(res.payload)
-    t.deepEqual(body, [])
-
-    t.deepEqual(userPrehandler.length, 0)
+    t.equal(200, getFriendFollowersResponse2.statusCode, getFriendFollowersResponse2.payload)
+    const getFriendFollowersBody2 = JSON.parse(getFriendFollowersResponse2.payload)
+    t.deepEqual(getFriendFollowersBody2, [])
   })
 })

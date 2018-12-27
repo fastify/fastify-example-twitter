@@ -1,48 +1,28 @@
 'use strict'
 
-const TWEET_COLLECTION_NAME = 'tweet'
-
-const fp = require('fastify-plugin')
-const TweetClient = require('./client')
-
 const {
   tweet: tweetSchema,
-  getTweets: getTweetsSchema
+  getTweets: getTweetsSchema,
+  getUserTweets: getUserTweetsSchema
 } = require('./schemas')
-const TweetService = require('./service')
 
-// See users/index.js for more explainations!
-module.exports = fp(async function (fastify, opts) {
-  const db = fastify.mongo.db
-  const tweetCollection = await db.createCollection(TWEET_COLLECTION_NAME)
-  await db.command({
-    'collMod': TWEET_COLLECTION_NAME,
-    validator: {
-      user: { $type: 'object' },
-      'user._id': { $type: 'objectId' },
-      text: { $type: 'string' }
-    }
-  })
-  await tweetCollection.createIndex({ 'user._id': 1 })
+module.exports = async function (fastify, opts) {
+  // All APIs are under authentication here!
+  fastify.addHook('preHandler', fastify.authPreHandler)
 
-  const tweetService = new TweetService(tweetCollection)
-  fastify.decorate('tweetClient', new TweetClient(tweetService))
+  fastify.post('/', { schema: tweetSchema }, addTwitterHandler)
+  fastify.get('/', { schema: getTweetsSchema }, getTwitterHandler)
+  fastify.get('/:userIds', { schema: getUserTweetsSchema }, getUserTweetsHandler)
+}
 
-  fastify.register(async function (fastify) {
-    fastify.decorate('tweetService', tweetService)
-
-    fastify.post('/', tweetSchema, addTwitterHandler)
-    fastify.get('/', getTwitterHandler)
-    fastify.get('/:userIds', getTweetsSchema, getUserTweetsHandler)
-  }, { prefix: opts.prefix })
-}, {
+module.exports[Symbol.for('plugin-meta')] = {
   decorators: {
     fastify: [
-      'mongo',
-      'transformStringIntoObjectId'
+      'authPreHandler',
+      'tweetService'
     ]
   }
-})
+}
 
 async function addTwitterHandler (req, reply) {
   const { text } = req.body
@@ -51,12 +31,10 @@ async function addTwitterHandler (req, reply) {
 }
 
 async function getTwitterHandler (req, reply) {
-  const tweets = await this.tweetService.fetchTweets([req.user._id])
-  return tweets
+  return this.tweetService.fetchTweets([req.user._id])
 }
 
 async function getUserTweetsHandler (req, reply) {
-  const userIds = req.params.userIds.split(',').map(id => this.transformStringIntoObjectId(id))
-  const tweets = await this.tweetService.fetchTweets(userIds)
-  return tweets
+  const userIds = req.params.userIds.split(',')
+  return this.tweetService.fetchTweets(userIds)
 }

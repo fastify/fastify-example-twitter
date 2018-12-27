@@ -1,105 +1,53 @@
-/* eslint-env node, mocha */
 'use strict'
 
-const timelinePlugin = require('../timeline')
-const { ObjectId } = require('mongodb')
-
-const nock = require('nock')
-const Fastify = require('fastify')
-const fp = require('fastify-plugin')
-
 const t = require('tap')
+const MongoClient = require('mongodb').MongoClient
 
-const USER_ID = new ObjectId()
+const Fastify = require('fastify')
+const example = require('../index')
 
-let userPrehandler = []
-async function injectUser (fastify) {
-  fastify.addHook('preHandler', async function (req, reply) {
-    req.user = userPrehandler.shift()
-  })
-}
+const config = require('./config')
+const { registerUsers, login, createTweet, follow } = require('./test-util')
 
-let getFollowArguments = []
-let getFollowReturn = []
-async function fakeFollowClient (fastify) {
-  fastify.decorate('followClient', {
-    getMyFollowing: function (req) {
-      getFollowArguments.push(req)
-      return getFollowReturn.shift()
-    }
-  })
-}
+t.test('user', async t => {
+  const mongoClient = await MongoClient.connect(config.MONGODB_URL, {useNewUrlParser: true})
+  await mongoClient.db('test').dropDatabase()
+  t.tearDown(() => mongoClient.close())
 
-let getTweetArguments = []
-let getTweetReturn = []
-async function fakeTweetClient (fastify) {
-  fastify.decorate('tweetClient', {
-    getTweets: function (req) {
-      getTweetArguments.push(req)
-      return getTweetReturn.shift()
-    }
-  })
-  fastify.decorate('transformStringIntoObjectId', ObjectId)
-  fastify.decorate('getUserIdFromRequest', () => USER_ID)
-}
-
-t.test('timeline', async t => {
   const fastify = Fastify({ logger: { level: 'silent' } })
-  fastify
-    .register(fp(injectUser))
-    .register(fp(fakeTweetClient))
-    .register(fp(fakeFollowClient))
-    .register(timelinePlugin)
-
-  nock.disableNetConnect()
-  t.tearDown(() => nock.enableNetConnect())
+  fastify.register(example, config)
+  t.tearDown(() => fastify.close())
 
   t.plan(1)
 
   t.test('get timeline', async t => {
-    t.plan(3)
+    t.plan(15)
 
-    const USERNAME = 'the-user-1'
-    const JSON_WEB_TOKEN = 'the-json-web-token'
+    const [
+      {userId: meUserId},
+      {userId: friend1UserId},
+      {userId: friend2UserId}
+    ] = await registerUsers(t, fastify, [
+      'my-username',
+      'friend1-username',
+      'friend2-username'
+    ])
+    const meJWT = await login(t, fastify, 'my-username')
+    const fiend1JWT = await login(t, fastify, 'friend1-username')
+    const fiend2JWT = await login(t, fastify, 'friend2-username')
+    await createTweet(t, fastify, meJWT, 'tweet user id 1')
+    await createTweet(t, fastify, fiend1JWT, 'tweet user id 2')
+    await createTweet(t, fastify, fiend2JWT, 'tweet user id 3')
+    await createTweet(t, fastify, meJWT, 'another tweet user id 1')
 
-    const USER_ID_1 = new ObjectId()
-    const USER_ID_2 = new ObjectId()
-    const USER_ID_3 = new ObjectId()
-
-    const followingTweets = [
-      {
-        text: 'tweet user id 1',
-        user: { _id: USER_ID_1 }
-      },
-      {
-        text: 'tweet user id 2',
-        user: { _id: USER_ID_2 }
-      },
-      {
-        text: 'tweet user id 3',
-        user: { _id: USER_ID_3 }
-      },
-      {
-        text: ' another tweet user id 1',
-        user: { _id: USER_ID_1 }
-      }
-    ]
-
-    userPrehandler = [
-      { _id: USER_ID, username: USERNAME }
-    ]
-    getFollowReturn = [
-      [ USER_ID_1, USER_ID_2, USER_ID_3 ]
-    ]
-    getTweetReturn = [
-      followingTweets
-    ]
+    await follow(t, fastify, meJWT, friend1UserId)
+    await follow(t, fastify, meJWT, friend2UserId)
 
     const res = await fastify.inject({
       method: 'GET',
-      url: '/',
+      url: '/api/timeline',
       headers: {
-        'Authorization': 'Bearer ' + JSON_WEB_TOKEN
+        'Authorization': 'Bearer ' + meJWT
       }
     })
     t.equal(200, res.statusCode, res.payload)
@@ -107,6 +55,23 @@ t.test('timeline', async t => {
     const body = JSON.parse(res.payload)
 
     t.equal(body.length, 4, res.payload)
-    t.deepEqual(body, JSON.parse(JSON.stringify(followingTweets)))
+    t.deepEqual(body.map(t => ({userId: t.user._id, text: t.text})), [
+      {
+        userId: meUserId,
+        text: 'another tweet user id 1'
+      },
+      {
+        userId: friend2UserId,
+        text: 'tweet user id 3'
+      },
+      {
+        userId: friend1UserId,
+        text: 'tweet user id 2'
+      },
+      {
+        userId: meUserId,
+        text: 'tweet user id 1'
+      }
+    ])
   })
 })

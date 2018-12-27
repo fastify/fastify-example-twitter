@@ -1,30 +1,22 @@
 'use strict'
 
-const fp = require('fastify-plugin')
-
 const {
   timeline: timelineSchema
 } = require('./schemas')
-const TimelineService = require('./service')
 
-// See users/index.js for more explainations!
-module.exports = fp(async function (fastify, opts) {
-  const timelineService = new TimelineService(fastify.followClient, fastify.tweetClient, fastify.transformStringIntoObjectId)
+module.exports = async function (fastify, opts) {
+  fastify.addHook('preHandler', fastify.authPreHandler)
+  fastify.get('/', timelineSchema, getTimelineHandler)
+}
 
-  fastify.register(async function (fastify) {
-    fastify
-      .decorate('timelineService', timelineService)
-      .get('/', timelineSchema, getTimelineHandler)
-  }, { prefix: opts.prefix })
-}, {
+module.exports[Symbol.for('plugin-meta')] = {
   decorators: {
     fastify: [
-      'followClient',
-      'tweetClient',
-      'transformStringIntoObjectId'
+      'authPreHandler',
+      'timelineService'
     ]
   }
-})
+}
 
 async function getTimelineHandler (req, reply) {
   return this.timelineService.getTimeline(req.user._id)
