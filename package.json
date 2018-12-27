@@ -9,8 +9,7 @@
     "unit": "tap test/*.test.js",
     "test": "npm run lint && npm run build-frontend && npm run unit",
     "build-frontend": "cd frontend && npm install && npm run build",
-    "microservice": "fastify",
-    "start": "env-cmd local.env fastify index.js"
+    "start": "env-cmd local.env fastify start index.js"
   },
   "author": "Tommaso Allevi <tomallevi@gmail.com>",
   "license": "MIT",
