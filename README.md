@@ -22,7 +22,7 @@ Open your browser at [http://localhost:3000](http://localhost:3000)
 
 ### Architecture
 
-Fastify helps us to keep this segregation: the plugin system provides us a way to declare pieces of our business logic without exposing them to the whole application. If you looking for a guide to understand better how the plugin system works, please read this [Plugin Guide](https://www.fastify.io/docs/latest/Plugins-Guide/)
+Fastify helps us to keep this segregation: the plugin system provides us a way to declare pieces of our business logic without exposing them to the whole application. If you looking for a guide to understand better how the plugin system works, please read this [Plugin Guide](https://www.fastify.dev/docs/latest/Plugins-Guide/)
 
 So, the backend is splitted into plugins:
 - *user*: user authentication / user database
@@ -35,7 +35,7 @@ The last three modules have a `preHandler` hook to find which the user has made 
 Each plugin has almost the same structure:
 - `index.js` is the fastify binding
 - `service.js` is the business logic
-- `schemas.js` has the schemas used for http validation and serialization (See [`fastify` schemas](https://www.fastify.io/docs/latest/Validation-and-Serialization/))
+- `schemas.js` has the schemas used for http validation and serialization (See [`fastify` schemas](https://www.fastify.dev/docs/latest/Validation-and-Serialization/))
 
 ### User plugin
 
