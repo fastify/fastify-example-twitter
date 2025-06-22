@@ -1,3 +1,6 @@
+> [!TIP]
+> This project is archived, check the new and updated [fastify demo](https://github.com/fastify/demo)!
+
 # Fastify twitter clone
 
 The aim of this project is to show how `fastify` can be used.
